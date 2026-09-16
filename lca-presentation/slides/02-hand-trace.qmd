@@ -1,0 +1,14 @@
+## Hand-Traced Example
+
+**Owner: Teammate 2**
+
+- Pick a small tree (7–10 nodes) — this same tree should be reused
+  by Teammate 3 (code test case) and Teammate 4 (visualization)
+- Show the tree diagram here
+
+## Step-by-Step Trace
+
+- Query: `LCA(u, v)` for a chosen pair of nodes
+- Walk through the algorithm step by step, one slide per major step
+  if needed
+- End with the resulting LCA node highlighted

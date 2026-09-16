@@ -1,0 +1,19 @@
+---
+title: "Lowest Common Ancestor (LCA)"
+subtitle: "Algorithm, Complexity, and Applications in Phylogenetics"
+author: "Team Name"
+format: revealjs
+bibliography: references.bib
+---
+
+{{< include slides/01-problem-idea.qmd >}}
+
+{{< include slides/02-hand-trace.qmd >}}
+
+{{< include slides/03-python-impl.qmd >}}
+
+{{< include slides/04-visualization.qmd >}}
+
+{{< include slides/05-complexity.qmd >}}
+
+{{< include slides/06-application.qmd >}}

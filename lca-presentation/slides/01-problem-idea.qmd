@@ -1,0 +1,20 @@
+## Problem Definition
+
+**Owner: Teammate 1**
+
+- What problem does LCA solve?
+- Input: a rooted tree `T` and two nodes `u`, `v`
+- Output: the lowest (deepest) node that is an ancestor of both `u` and `v`
+
+## Why LCA Matters
+
+- Motivating examples (file systems, version control, taxonomy)
+- Brief mention that later this deck ties it to phylogenetic trees
+
+## Core Idea
+
+**Owner: Teammate 1**
+
+- Naive idea: walk up from both nodes, find first common ancestor
+- Key insight that leads to faster algorithms (e.g. binary lifting, Euler tour + RMQ)
+- State which variant this team implements (coordinate with Teammate 3)

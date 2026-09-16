@@ -1,0 +1,14 @@
+## Time Complexity
+
+**Owner: Teammate 5**
+
+- Must match the variant Teammate 3 implemented
+- Best case, average case, worst case
+- For each case, state what tree shape / query pattern produces it
+  (e.g. balanced vs. skewed tree)
+
+## Space Complexity
+
+- Memory used by preprocessing structures (e.g. ancestor tables,
+  Euler tour array, sparse table) vs. the tree itself
+- How space scales with `n` (number of nodes)

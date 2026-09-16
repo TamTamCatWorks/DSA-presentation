@@ -1,0 +1,9 @@
+project:
+  type: default
+
+format:
+  revealjs:
+    slide-number: true
+    theme: simple
+    code-line-numbers: true
+    incremental: false

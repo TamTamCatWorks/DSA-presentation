@@ -1,0 +1,20 @@
+# Quarto render output
+/main.html
+/*.html
+/*_files/
+/.quarto/
+
+# Individual slide renders (if teammates render standalone while working)
+/slides/*.html
+/slides/*_files/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+**/*.quarto_ipynb
