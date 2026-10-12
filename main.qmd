@@ -1,7 +1,6 @@
 ---
 title: "Lowest Common Ancestor (LCA)"
-subtitle: "Algorithm, Complexity, and Applications in Phylogenetics"
-author: "Team Name"
+author: "Team 8"
 format: revealjs
 bibliography: references.bib
 ---
