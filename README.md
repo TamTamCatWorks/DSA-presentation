@@ -33,12 +33,12 @@ Open the built `.html` file(s) in the browser and it should display the slides.
 Every push to `main` builds and publishes the combined presentation and each
 standalone section with GitHub Actions. The published site is available at:
 
-https://tt-eaves.github.io/DSA-presentation/
+https://tamtamcatworks.github.io/DSA-presentation/
 
 The combined presentation is the main page. Standalone sections are published
 under `/sections/`, for example:
 
-https://tt-eaves.github.io/DSA-presentation/sections/02-hand-trace/
+https://tamtamcatworks.github.io/DSA-presentation/sections/02-hand-trace/
 
 Each workflow run also provides a downloadable `slides-site` artifact from the
 Actions run summary. Generated files are kept out of the repository.
