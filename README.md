@@ -28,6 +28,21 @@ with `{section}` your desired section
 
 Open the built `.html` file(s) in the browser and it should display the slides. 
 
+## GitHub Pages
+
+Every push to `main` builds and publishes the combined presentation and each
+standalone section with GitHub Actions. The published site is available at:
+
+https://tt-eaves.github.io/DSA-presentation/
+
+The combined presentation is the main page. Standalone sections are published
+under `/sections/`, for example:
+
+https://tt-eaves.github.io/DSA-presentation/sections/02-hand-trace/
+
+Each workflow run also provides a downloadable `slides-site` artifact from the
+Actions run summary. Generated files are kept out of the repository.
+
 ## Remarks
 
 - I gitingore the built files since I don't want to clutter the repo, so you have to build them yourself to see the work.

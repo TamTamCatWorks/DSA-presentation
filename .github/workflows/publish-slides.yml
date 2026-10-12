@@ -1,0 +1,72 @@
+name: Publish slides
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Render presentations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          site_dir="_site"
+          build_dir=".quarto-build"
+          rm -rf "$site_dir" "$build_dir"
+          mkdir -p "$site_dir/sections" "$build_dir"
+
+          quarto render main.qmd --output-dir "$build_dir/main"
+          cp -R "$build_dir/main/." "$site_dir/"
+          mv "$site_dir/main.html" "$site_dir/index.html"
+
+          for source in slides/*.qmd; do
+            section="${source##*/}"
+            section="${section%.qmd}"
+            quarto render "$source" --output-dir "$build_dir/$section"
+            mkdir -p "$site_dir/sections/$section"
+            cp -R "$build_dir/$section/slides/." "$site_dir/sections/$section/"
+          done
+
+          rm -rf "$build_dir"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Upload downloadable site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: slides-site
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
