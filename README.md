@@ -1,3 +1,7 @@
+## Get Quarto
+
+Detailed instructions at ![quarto docs](https://quarto.org/docs/get-started/).
+
 ## Build
 
 ### Main Slides
