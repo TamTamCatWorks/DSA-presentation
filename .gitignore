@@ -5,9 +5,12 @@
 /*_files/
 /.quarto/
 
-# Individual slide renders (if teammates render standalone while working)
+# Individual slide renders 
 /slides/*.html
 /slides/*_files/
+
+# Test
+/test/
 
 # Python
 __pycache__/
