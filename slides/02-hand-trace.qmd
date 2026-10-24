@@ -1,3 +1,85 @@
-## Test 2
+2.0: Bìa:
+    • Tiêu đề: Shortest Common Superstring.
+    • Phụ đề: Trace tay thuật toán tham lam theo độ chồng lấp.
+    • Minh hoạ: AAA + AAB → AAAB, "trùng 2 ký tự, chỉ cần viết một lần".
 
-- test slide 2
+2.1: Quy ước:
+    • Đầu vào: tập n chuỗi. Đầu ra: chuỗi ngắn nhất chứa mọi chuỗi đầu vào như một chuỗi con liên tiếp.
+    • Quy ước 1: loại trước mọi chuỗi đã nằm trọn trong chuỗi khác.
+    • Quy ước 2: overlap(a, b) là hậu tố dài nhất của a trùng với tiền tố của b, tối thiểu 1 ký tự.
+    • Quy ước 3: nhiều cặp cùng overlap lớn nhất (hoà) thì lấy cặp đầu tiên khi quét i < j.
+    • Quy ước 4: không còn cặp nào chồng lấp thì nối đuôi chuỗi cuối vào chuỗi đầu.
+    Kết quả phụ thuộc vào quy ước, nhất là 3 và 4
+
+2.2: Tư duy thuật toán sử dụng đường đi Hamilton:
+    • Bước 1: mỗi thứ tự ghép n chuỗi là một đường đi qua mọi đỉnh đúng một lần.
+    • Bước 2: ghép a ngay trước b tiết kiệm overlap(a, b) ký tự, chính là trọng số cạnh a → b.
+    • Bước 3: chọn đường đi có tổng trọng số lớn nhất. Độ dài = tổng độ dài chuỗi − tổng trọng số.
+    • Bảng chi phí tìm chính xác (thử mọi hoán vị là n!, DP bitmask là 2ⁿ · n²):
+    Bài toán thuộc lớp NP, rất tốn kém khi n lớn.
+
+2.3: Ví dụ AAA / BBB: bảng overlap và năm cặp hoà:
+    • Năm chuỗi: AAA, AAB, ABB, BBB, BBA. Bảng dưới đây: hàng a, cột b là overlap(a, b).
+    • Năm cạnh cùng trọng số 2: AAA → AAB, AAB → ABB, ABB → BBB, ABB → BBA, BBB → BBA.
+    • Cạnh AAA → AAB đứng đầu theo thứ tự quét nên được chọn trước.
+    • Brute-force 120 hoán vị cho kết quả tối ưu là 7.
+
+2.4: Đồ thị chồng lấp của AAA / BBB:
+    • Hình: 5 đỉnh, chỉ vẽ 5 cạnh trọng số 2; sáu cạnh trọng số 1 được ẩn cho gọn (tổng 11 cạnh).
+    • Đỉnh: mỗi chuỗi. Cạnh a → b: trọng số là overlap(a, b). Đáp án: đường đi Hamilton có tổng trọng số lớn nhất.
+    • Đường đi tốt nhất: AAA → AAB → ABB → BBB → BBA, tổng 2 + 2 + 2 + 2 = 8, nên độ dài là 15 − 8 = 7.
+    Bài toán cần tìm đường đi, không cần chu trình vì không phải quay về đỉnh bắt đầu.
+
+2.5: Tư duy thuật toán greedy:
+    • Bước 1: tính overlap của mọi cặp chuỗi.
+    • Bước 2: chọn cặp có overlap lớn nhất. Hoà thì lấy cặp đầu tiên khi quét.
+    • Bước 3: gộp hai chuỗi thành một, lặp lại cho đến khi còn một chuỗi (n − 1 vòng).
+    • Vì sao hợp lý: cạnh nặng nhất tiết kiệm được nhiều ký tự nhất ngay lúc này. Trên đồ thị: chọn cạnh nặng nhất, gộp hai đỉnh.
+    • Vì sao có thể sai: chỉ nhìn lợi ích trước mắt, không nhìn trước hậu quả. Chọn nhầm cạnh có thể làm một chuỗi bị cô lập.
+
+2.6: 4 vòng trace tay:
+    Greedy gộp AAA, AAB, ABB, BBB, BBA thành AAABBABBB (9 ký tự) sau bốn vòng, trong đó ba vòng đầu gộp được, vòng cuối phải nối đuôi. Mỗi slide giữ cùng bố cục: danh sách arr, bảng overlap (hàng được chọn tô màu), và khung "Chọn cặp".
+
+2.7: Vòng 1: gộp AAA với AAB
+    • arr: AAA, AAB, ABB, BBB, BBA (bảng overlap như slide 4).
+    • Năm cặp cùng overlap 2; quy ước 3 lấy cặp đầu tiên khi quét: AAA + AAB → AAAB.
+    • Chuỗi cuối (BBA) lấp vào chỗ AAB: arr = AAAB, BBA, ABB, BBB.
+    • Tiết kiệm được 2 ký tự.
+
+2.8: Vòng 2: gộp AAAB với ABB:
+    • arr: AAAB, BBA, ABB, BBB.
+    • Bốn cặp cùng overlap 2; cặp đầu tiên khi quét là AAAB + ABB → AAABB.
+    • BBB lấp vào chỗ ABB: arr = AAABB, BBA, BBB. Tiết kiệm thêm 2 (tổng 4).
+
+2.9: Vòng 3: gộp AAABB với BBA, chỗ rẽ nhánh: 
+    • arr: AAABB, BBA, BBB.
+    • Ba cặp hoà: AAABB → BBA, AAABB → BBB và BBB → BBA đều bằng 2.
+    • Luật lấy cặp đầu tiên chọn AAABB + BBA → AAABBA. arr = AAABBA, BBB. Tiết kiệm thêm 2 (tổng 6).
+    • Nếu chọn cạnh AAABB → BBB thì sao?
+
+2.10: Vòng 4: hết overlap, nối đuôi:
+    • arr: AAABBA, BBB. Mọi ô trong bảng overlap đều là 0.
+    • Quy ước 4: ghép thẳng hai chuỗi, được AAABBABBB.
+    • Tiết kiệm 2 + 2 + 2 + 0 = 6, nên độ dài là 15 − 6 = 9, dài hơn tối ưu 2 ký tự.
+
+2.11: Đồ thị co lại và so sánh:
+    Chỉ khác nhau ở cách xử lý hoà ở vòng 3, kết quả lại khác nhau.
+
+2.12: Đồ thị qua lại qua bốn vòng:
+    • Hình: bốn khung, mỗi khung là đồ thị trước một vòng. Cạnh cam là cạnh sắp được gộp, đỉnh nền xanh là chuỗi đã gộp, chỉ vẽ cạnh trọng số 2.
+
+2.13: Cùng đầu vào, hai cách xử lý hoà:
+    • Nhánh 1, vòng 3 gộp AAABB + BBA: BBB bị bỏ lại và phải nối đuôi ở vòng 4, ra AAABBABBB, 9 ký tự, chưa tối ưu.
+    • Nhánh 2, vòng 3 gộp AAABB + BBB: vòng 4 gộp AAABBB + BBA (overlap 2), ra AAABBBA, 7 ký tự, tối ưu (brute-force 120 hoán vị).
+    • Kết luận: greedy có thể sai, và kết quả phụ thuộc vào cách chọn khi hoà.
+
+2.14: Greedy kẹt, đường đi Hamilton tối ưu:
+    • Hình: hai khung cùng đồ thị; nét liền là cạnh được dùng, nét đứt là cạnh bị bỏ.
+    • Greedy lấy cạnh nặng nhất từng bước nên ABB → BBA chiếm chỗ của hai cạnh ABB → BBB và BBB → BBA.
+    • Tìm đường đi Hamilton tốt nhất là bài toán NP-khó, nên với nhiều chuỗi người ta dùng greedy làm heuristic, đổi tốc độ lấy việc có khi không tối ưu.
+
+2.15: Từ trace đến phân tích:
+    • Độ phức tạp thời gian: vòng với k chuỗi xét k(k − 1)/2 cặp, tức 10, 6, 3, 1 khi n = 5. Tổng 20 lần tính overlap, cỡ n³/6 khi n lớn.
+    • Tốt nhất và xấu nhất: mỗi lần tính overlap tốn từ O(L) nếu so sánh lệch ngay, đến O(L²) nếu chuỗi lặp nhiều.
+    • Độ phức tạp không gian: greedy chỉ giữ danh sách chuỗi, cỡ n · L ký tự. Bitmask DP cần bảng 2ⁿ · n ô.
+    • Các con số 10, 6, 3, 1 đếm trực tiếp từ trace (n = 5, 4, 3, 2 chuỗi); tổng 20 bằng tổ hợp chập 3 của 6.
