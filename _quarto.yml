@@ -8,3 +8,4 @@ format:
     theme: simple
     code-line-numbers: true
     incremental: false
+    mainfont: "Arial"

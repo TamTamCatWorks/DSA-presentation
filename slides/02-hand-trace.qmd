@@ -1,13 +1,14 @@
 ## Bài toán và bốn quy ước {.smaller}
 
-**Đầu vào:** tập n chuỗi. Ví dụ xuyên suốt: `AAA, AAB, ABB, BBB, BBA` (tổng 15 ký tự).
+**Đầu vào:** tập n chuỗi. 
+Ví dụ xuyên suốt: `AAA, AAB, ABB, BBB, BBA`.
 
-**Đầu ra:** chuỗi ngắn nhất chứa mọi chuỗi đầu vào như một chuỗi con **liên tiếp** (Shortest Common *Superstring*).
+**Đầu ra:** chuỗi ngắn nhất chứa mọi chuỗi đầu vào như một chuỗi con **liên tiếp** (Shortest Common Superstring).
 
 Bốn quy ước của phần trace:
 
 1. Loại trước mọi chuỗi đã nằm trọn trong chuỗi khác.
-2. `overlap(a, b)` là hậu tố dài nhất của a trùng với tiền tố của b, tối thiểu 1 ký tự.
+2. `overlap(a, b)` là hậu tố (suffix) dài nhất của a trùng với tiền tố (prefix) của b, tối thiểu 1 ký tự.
 3. Nhiều cặp cùng overlap lớn nhất (**hoà**): [lấy cặp đầu tiên]{.hl} khi quét `i < j`.
 4. Không còn cặp nào chồng lấp: [nối đuôi]{.hl} chuỗi cuối vào chuỗi đầu.
 
@@ -24,7 +25,7 @@ Bốn quy ước của phần trace:
 Nói rõ bốn quy ước trước khi trace, vì kết quả phụ thuộc vào chúng. Quy ước 3 (xử lý hoà) và 4 (nối đuôi) là hai điểm làm greedy ra kết quả khác nhau ở ví dụ này. Lưu ý tên bài toán: Superstring (chuỗi con liên tiếp), không phải Substring. Ví dụ lấy từ tài liệu của Langmead.
 :::
 
-## Tư tưởng 1: đường đi Hamilton {.smaller}
+## Tư tưởng 1: Đường đi Hamilton {.smaller}
 
 :::: {.columns}
 ::: {.column width="52%"}
@@ -41,7 +42,7 @@ Tìm chính xác thì tốn kém:
 | 10 | 3.628.800 | 102.400 |
 | 20 | ≈ 2,4 × 10¹⁸ | ≈ 4,2 × 10⁸ |
 
-Bài toán **NP-khó**: với n lớn không thể tìm chính xác.
+Bài toán **NP**: không thể tìm chính xác với n lớn.
 :::
 ::::
 
@@ -72,7 +73,7 @@ Hàng a, cột b: `overlap(a, b)`
 - ABB → BBA
 - BBB → BBA
 
-Greedy phải có luật chọn khi hoà. Với quy ước 3, cạnh [AAA → AAB]{.hl} đứng đầu theo thứ tự quét nên được chọn trước.
+Theo quy ước 3, cạnh [AAA → AAB]{.hl} đứng đầu theo thứ tự quét nên được chọn trước.
 
 Đáp án tối ưu (brute-force 120 hoán vị): **7 ký tự**.
 :::
@@ -101,7 +102,8 @@ digraph {
 }
 ```
 
-Chỉ vẽ 5 cạnh trọng số 2. Sáu cạnh trọng số 1 được ẩn cho gọn (tổng 11 cạnh).
+- Đồ thị có hướng và có trọng số.
+- Chỉ vẽ 5 cạnh trọng số 2, ẩn 6 cạnh trọng số 1.
 :::
 ::: {.column width="38%"}
 **5 đỉnh, 11 cạnh**
@@ -118,18 +120,18 @@ Chỉ vẽ 5 cạnh trọng số 2. Sáu cạnh trọng số 1 được ẩn cho
 Bảng overlap ở slide trước chính là ma trận kề của đồ thị này. Bài toán cần đường đi, không cần chu trình vì không phải quay về đỉnh đầu. Có 11 cạnh trọng số lớn hơn 0: 5 cạnh trọng số 2 được vẽ ra, 6 cạnh trọng số 1 được ẩn. Đường đi qua cả năm đỉnh với tổng trọng số lớn nhất là AAA, AAB, ABB, BBB, BBA, tổng 8, ứng với chuỗi AAABBBA dài 7.
 :::
 
-## Tư tưởng 2: greedy, mỗi bước lấy overlap lớn nhất {.smaller}
+## Tư tưởng 2: Greedy {.smaller}
 
 :::: {.columns}
 ::: {.column width="50%"}
 1. Tính overlap của mọi cặp chuỗi.
-2. Chọn cặp có overlap **lớn nhất** (trọng số cạnh lớn nhất = tiết kiệm nhiều ký tự nhất). Hoà thì lấy cặp đầu tiên khi quét.
+2. Chọn cặp có overlap **lớn nhất**. Hoà thì lấy cặp đầu tiên khi quét.
 3. Gộp hai chuỗi thành một, rồi lặp lại cho đến khi còn một chuỗi: **n − 1 vòng**.
 :::
 ::: {.column width="50%"}
-**Vì sao hợp lý:** cạnh nặng nhất tiết kiệm được nhiều ký tự nhất ngay lúc này. Trên đồ thị: chọn cạnh nặng nhất, gộp hai đỉnh.
+- **Vì sao hợp lý:** cạnh nặng nhất tiết kiệm được nhiều ký tự nhất ngay lúc này.
 
-**Vì sao có thể sai:** chỉ nhìn lợi ích trước mắt, không nhìn trước hậu quả. Chọn nhầm cạnh có thể làm một chuỗi bị cô lập.
+- **Vì sao có thể sai:** chỉ nhìn lợi ích trước mắt, không nhìn trước hậu quả, chọn nhầm cạnh có thể làm một chuỗi bị cô lập.
 :::
 ::::
 
@@ -137,7 +139,7 @@ Bảng overlap ở slide trước chính là ma trận kề của đồ thị n�
 "Nặng nhất" nghĩa là trọng số cạnh lớn nhất, tức overlap dài nhất. Thay vì tìm đường đi Hamilton tốt nhất trên toàn đồ thị, mỗi bước chỉ chọn cặp có overlap lớn nhất hiện có và gộp lại, rồi tính lại với danh sách mới. Chỉ cần n − 1 vòng nên rẻ hơn nhiều so với n giai thừa. Điểm yếu là lựa chọn chỉ dựa trên lợi ích trước mắt. Ví dụ AAA/BBB sắp trace sẽ cho thấy đúng chuyện này.
 :::
 
-## Vòng 1: gộp AAA với AAB {.smaller}
+## Vòng 1: Gộp AAA với AAB {.smaller}
 
 :::: {.columns}
 ::: {.column width="58%"}
@@ -154,15 +156,11 @@ Danh sách hiện tại: `[AAA, AAB, ABB, BBB, BBA]`
 ::: {.column width="42%"}
 **Chọn cặp**
 
-Năm cặp cùng overlap 2. Theo quy ước 3, lấy cặp đầu tiên khi quét:
+- Năm cặp cùng overlap 2. Theo quy ước 3, lấy cặp đầu tiên khi quét: [AAA + AAB → AAAB]{.pick}
 
-[AAA + AAB → AAAB]{.pick}
+- Chuỗi cuối (BBA) lấp vào chỗ AAB: `[AAAB, BBA, ABB, BBB]`
 
-Chuỗi cuối (BBA) lấp vào chỗ AAB:
-
-`[AAAB, BBA, ABB, BBB]`
-
-Tiết kiệm được 2 ký tự.
+- Tiết kiệm được 2 ký tự.
 :::
 ::::
 
@@ -170,7 +168,7 @@ Tiết kiệm được 2 ký tự.
 Quét mọi cặp i < j. Cặp đầu tiên có overlap 2 là AAA và AAB nên chọn luôn, vì chỉ cập nhật khi overlap lớn hẳn hơn. Gộp được AAAB. Xoá chuỗi bằng cách đưa chuỗi cuối (BBA) vào vị trí của AAB rồi giảm kích thước danh sách. Thao tác này làm đổi thứ tự danh sách, và thứ tự lại quyết định ai thắng khi hoà ở vòng sau.
 :::
 
-## Vòng 2: gộp AAAB với ABB {.smaller}
+## Vòng 2: Gộp AAAB với ABB {.smaller}
 
 :::: {.columns}
 ::: {.column width="58%"}
@@ -186,15 +184,11 @@ Danh sách hiện tại: `[AAAB, BBA, ABB, BBB]`
 ::: {.column width="42%"}
 **Chọn cặp**
 
-Bốn cặp cùng overlap 2. Cặp đầu tiên khi quét là AAAB và ABB (cặp AAAB, BBA chỉ có overlap 1):
+- Bốn cặp cùng overlap 2. Cặp đầu tiên khi quét là AAAB và ABB (cặp AAAB, BBA chỉ có overlap 1): [AAAB + ABB → AAABB]{.pick}
 
-[AAAB + ABB → AAABB]{.pick}
+- BBB lấp vào chỗ ABB: `[AAABB, BBA, BBB]`
 
-BBB lấp vào chỗ ABB:
-
-`[AAABB, BBA, BBB]`
-
-Tiết kiệm thêm 2 ký tự (tổng 4).
+- Tiết kiệm thêm 2 ký tự (tổng 4).
 :::
 ::::
 
@@ -202,7 +196,7 @@ Tiết kiệm thêm 2 ký tự (tổng 4).
 Danh sách giờ là AAAB, BBA, ABB, BBB (BBA đã lên vị trí thứ hai ở vòng trước). Lưu ý bảng overlap được tính lại sau mỗi vòng với danh sách mới. Quét i < j: (AAAB, BBA) chỉ có overlap 1, (AAAB, ABB) có overlap 2 nên được chọn, các cặp hoà phía sau không còn được xét.
 :::
 
-## Vòng 3: gộp AAABB với BBA, chỗ rẽ nhánh {.smaller}
+## Vòng 3: Gộp AAABB với BBA, chỗ rẽ nhánh {.smaller}
 
 :::: {.columns}
 ::: {.column width="58%"}
@@ -217,15 +211,13 @@ Danh sách hiện tại: `[AAABB, BBA, BBB]`
 ::: {.column width="42%"}
 **Ba cặp hoà**
 
-AAABB → BBA, AAABB → BBB và BBB → BBA cùng bằng 2. Lấy cặp đầu tiên:
+- AAABB → BBA, AAABB → BBB và BBB → BBA cùng bằng 2. Lấy cặp đầu tiên: [AAABB + BBA → AAABBA]{.pick}
 
-[AAABB + BBA → AAABBA]{.pick}
+- Ta được: `[AAABBA, BBB]`
 
-`[AAABBA, BBB]`
+- Tiết kiệm thêm 2 ký tự (tổng 6).
 
-Tiết kiệm thêm 2 ký tự (tổng 6).
-
-Nếu chọn AAABB + BBB thì sao? Xem slide so sánh.
+- Nếu chọn AAABB + BBB thì sao? 
 :::
 ::::
 
@@ -233,7 +225,7 @@ Nếu chọn AAABB + BBB thì sao? Xem slide so sánh.
 Đây là chỗ rẽ nhánh quan trọng nhất. Ba cặp cùng overlap 2 và cả ba đều hợp lệ về mặt thuật toán. Luật lấy cặp đầu tiên chọn AAABB với BBA. Hậu quả: BBB bị bỏ lại, không còn chuỗi nào chồng lấp với AAABBA ở vòng sau. Nếu chọn AAABB với BBB thì BBA vẫn nối tiếp được. Greedy không nhìn trước được hậu quả này.
 :::
 
-## Vòng 4: hết overlap, nối đuôi {.smaller}
+## Vòng 4: Hết overlap, nối đuôi {.smaller}
 
 :::: {.columns}
 ::: {.column width="58%"}
@@ -249,13 +241,11 @@ Ghép thẳng: <span class="hl">AAABBA</span><span class="good">BBB</span>
 ::: {.column width="42%"}
 **Quy ước 4**
 
-Mọi ô đều là 0, nên ghép thẳng hai chuỗi:
+- Mọi ô đều là 0, nên ghép thẳng hai chuỗi: [AAABBABBB]{.pick}
 
-[AAABBABBB]{.pick}
+- Tiết kiệm 2 + 2 + 2 + 0 = 6 ký tự
 
-Tiết kiệm 2 + 2 + 2 + 0 = 6
-
-15 − 6 = **9 ký tự**, dài hơn tối ưu (7) hai ký tự.
+- 15 − 6 = **9 ký tự**, dài hơn tối ưu (7) hai ký tự.
 :::
 ::::
 
@@ -342,26 +332,22 @@ Cùng một trace nhưng nhìn bằng đồ thị. Mỗi vòng, greedy chọn c�
 
 :::: {.columns}
 ::: {.column width="50%"}
-**Vòng 3: AAABB + BBA** (luật của `scs.cpp`)
+**Vòng 3: AAABB + BBA** 
 
-BBB bị bỏ lại, phải nối đuôi ở vòng 4.
-
-`AAABBABBB`
+- BBB bị bỏ lại, phải nối đuôi ở vòng 4: `AAABBABBB`
 
 [9]{.big .hl} ký tự, chưa tối ưu
 :::
 ::: {.column width="50%"}
 **Vòng 3: AAABB + BBB**
 
-Vòng 4: AAABBB + BBA (overlap 2). Mọi chuỗi đều được nối bằng overlap.
+- Mọi chuỗi đều được nối bằng overlap: `AAABBBA`
 
-`AAABBBA`
-
-[7]{.big .good} ký tự, tối ưu (brute-force 120 hoán vị)
+[7]{.big .good} ký tự, tối ưu 
 :::
 ::::
 
-**Kết luận:** greedy có thể sai, và kết quả phụ thuộc vào cách chọn khi hoà.
+- **Kết luận:** sử dụng greedy có thể không tối ưu, và kết quả phụ thuộc vào cách chọn khi hoà.
 
 ::: {.notes}
 Slide chốt của phần trace. Cả hai nhánh đều là greedy hợp lệ vì mỗi vòng đều chọn cặp có overlap lớn nhất. Khác biệt duy nhất là chọn cặp nào trong ba cặp hoà ở vòng 3. Một nhánh ra 9, nhánh kia ra 7, và 7 được brute-force xác nhận là tối ưu. Từ đây có thể nói thuật toán này là heuristic: không đảm bảo tối ưu.
@@ -420,7 +406,7 @@ Cùng đồ thị, hai đường đi khác nhau. Greedy chọn ba cạnh trọng
 
 - **Greedy là heuristic:** mỗi bước chọn cạnh lớn nhất trước mắt, không nhìn trước hậu quả. Ở ví dụ này nó cho 9 ký tự, trong khi tối ưu là 7.
 - **Kết quả phụ thuộc cách xử lý hoà:** cùng đầu vào, hai lựa chọn ở vòng 3 cho 9 hoặc 7.
-- **Hamilton tối ưu là NP-khó:** greedy đổi lấy tốc độ, chấp nhận có khi không tối ưu.
+- **Hamilton tối ưu là NP:** greedy đổi lấy tốc độ, chấp nhận có khi không tối ưu.
 - **Số lần tính overlap mỗi vòng:** 10, 6, 3, 1 (n = 5, 4, 3, 2 chuỗi), tổng 20. Đây là điểm nối sang phần độ phức tạp.
 
 ::: {.notes}
