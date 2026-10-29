@@ -1,3 +1,458 @@
-## Test 2
+## Bài toán và bốn quy ước {.smaller}
 
-- test slide 2
+**Đầu vào:** tập n chuỗi. Ví dụ xuyên suốt: `AAA, AAB, ABB, BBB, BBA`.
+
+**Đầu ra:** chuỗi ngắn nhất chứa mọi chuỗi đầu vào như một chuỗi con **liên tiếp** (Shortest Common *Superstring*).
+
+Bốn quy ước của phần trace (đúng như `SCS.py`):
+
+1. Loại trước mọi chuỗi đã nằm trọn trong chuỗi khác.
+2. `overlap(a, b)` là hậu tố (suffix) dài nhất của a trùng với tiền tố (prefix) của b.
+3. Luật xử lý hoà: mọi cặp có hướng (i, j) được đưa vào một **heap** với khoá (overlap lớn trước, rồi [ô i nhỏ trước, ô j nhỏ trước]{.hl}).
+4. Gộp: chuỗi mới nằm ở [ô i]{.hl}, ô j bị đánh dấu **đã dùng**, phiên bản của ô i tăng thêm 1.
+
+```{=html}
+<style>
+.hl { color:#B8460F; font-weight:700; }
+.good { color:#1F5FBF; font-weight:700; }
+.pick { display:inline-block; font-family:monospace; font-weight:700; color:#8F3508; background:#FBE3D3; border-radius:8px; padding:2px 12px; }
+.big { font-size:2.4em; font-weight:700; line-height:1.1; }
+</style>
+```
+
+::: {.notes}
+Nói rõ bốn quy ước trước khi trace, vì kết quả phụ thuộc vào chúng. Quy ước 3 (heap và luật hoà) và quy ước 4 (gộp vào ô i, đánh dấu ô j) là hai điểm quyết định thứ tự gộp. Lưu ý tên bài toán: Superstring (chuỗi con liên tiếp), không phải Substring. Ví dụ lấy từ tài liệu của Langmead.
+:::
+
+## Hướng làm 1: đường đi Hamilton {.smaller}
+
+:::: {.columns}
+::: {.column width="52%"}
+1. Mỗi thứ tự ghép n chuỗi là một **đường đi qua mọi đỉnh đúng một lần** trên đồ thị chồng lấp.
+2. Ghép a ngay trước b tiết kiệm `overlap(a, b)` ký tự, chính là **trọng số cạnh** a → b.
+3. Chọn đường đi có **tổng trọng số lớn nhất**. Độ dài kết quả = tổng độ dài các chuỗi − tổng trọng số.
+4. Greedy dựng đường đi này bằng cách **chốt dần từng cạnh nặng nhất**. Heap giúp lấy cạnh nặng nhất mà không phải quét lại toàn đồ thị.
+:::
+::: {.column width="48%"}
+Tìm chính xác thì tốn kém:
+
+| n | n! (mọi hoán vị) | 2ⁿ·n² (DP bitmask) |
+|:-:|:-:|:-:|
+| 5 | 120 | 800 |
+| 10 | 3.628.800 | 102.400 |
+| 20 | ≈ 2,4 × 10¹⁸ | ≈ 4,2 × 10⁸ |
+
+Bài toán **NP-khó**: với n lớn không thể tìm chính xác.
+:::
+::::
+
+::: {.notes}
+Biến việc ghép chuỗi thành việc chọn thứ tự. Mỗi lần ghép a trước b tiết kiệm đúng overlap(a, b) ký tự, nên tổng độ dài giảm bằng tổng trọng số các cạnh trên đường đi. Muốn ngắn nhất thì chọn đường đi có tổng trọng số lớn nhất. Cách chính xác là thử n! hoán vị hoặc quy hoạch động theo tập con (kiểu Held-Karp). Với n = 20, n! cỡ 2,4 nhân 10 mũ 18, còn bitmask cỡ 4 nhân 10 mũ 8. Bài toán NP-khó nên cả hai đều không dùng được khi n lớn, đó là lý do cần greedy. Mỗi lần gộp hai chuỗi chính là chốt một cạnh của đường đi.
+:::
+
+## Bảng overlap và năm cặp hoà {.smaller}
+
+:::: {.columns}
+::: {.column width="58%"}
+Hàng a, cột b: `overlap(a, b)`
+
+| a → b | AAA | AAB | ABB | BBB | BBA |
+|:--|:-:|:-:|:-:|:-:|:-:|
+| **AAA** (0) | – | [2]{.hl} | 1 | 0 | 0 |
+| **AAB** (1) | 0 | – | [2]{.hl} | 1 | 1 |
+| **ABB** (2) | 0 | 0 | – | [2]{.hl} | [2]{.hl} |
+| **BBB** (3) | 0 | 0 | 0 | – | [2]{.hl} |
+| **BBA** (4) | 1 | 1 | 1 | 0 | – |
+:::
+::: {.column width="42%"}
+**Năm cạnh cùng trọng số 2**
+
+- AAA → AAB, khoá (2, 0, 1)
+- AAB → ABB, khoá (2, 1, 2)
+- ABB → BBB, khoá (2, 2, 3)
+- ABB → BBA, khoá (2, 2, 4)
+- BBB → BBA, khoá (2, 3, 4)
+
+Heap phải có luật chọn khi hoà. Với khoá (overlap, i, j), cạnh [AAA → AAB]{.hl} đứng đầu nên được chọn trước.
+
+Đáp án tối ưu (brute-force 120 hoán vị): **7 ký tự**.
+:::
+::::
+
+::: {.notes}
+Hàng là chuỗi đứng trước, cột là chuỗi đứng sau, số trong ngoặc là chỉ số ô. Bảng không đối xứng. Điểm mấu chốt: có tới năm cạnh cùng trọng số 2, nên cần luật chọn khi hoà. Trong code, luật này nằm ngay ở khoá của heap: so overlap trước, bằng nhau thì so ô i, rồi ô j. Nhắc trước rằng đáp án tối ưu là 7 để người nghe so sánh với kết quả ở các slide sau.
+:::
+
+## Đồ thị chồng lấp của AAA / BBB {.smaller}
+
+:::: {.columns}
+::: {.column width="62%"}
+```{dot}
+//| fig-width: 6
+//| fig-height: 2.4
+digraph {
+  rankdir=LR; bgcolor="transparent"; nodesep=0.4; ranksep=0.55;
+  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=18, fontcolor="#1B2430", penwidth=1.5];
+  edge [color="#1F5FBF", fontcolor="#1F5FBF", fontname="monospace", fontsize=16, penwidth=2];
+  AAA -> AAB [label="2"];
+  AAB -> ABB [label="2"];
+  ABB -> BBB [label="2"];
+  ABB -> BBA [label="2"];
+  BBB -> BBA [label="2"];
+}
+```
+
+Chỉ vẽ 5 cạnh trọng số 2, ẩn các cạnh trọng số 1.
+:::
+::: {.column width="38%"}
+**5 đỉnh, 11 cạnh**
+
+- **Đỉnh:** mỗi chuỗi
+- **Cạnh a → b:** trọng số là `overlap(a, b)`
+- **Đáp án:** đường đi Hamilton có tổng trọng số lớn nhất
+
+Đường đi tốt nhất: AAA → AAB → ABB → BBB → BBA, tổng 2+2+2+2 = 8, nên độ dài là 15 − 8 = [7]{.good}.
+:::
+::::
+
+::: {.notes}
+Bảng overlap ở slide trước chính là ma trận kề của đồ thị này. Bài toán cần đường đi, không cần chu trình vì không phải quay về đỉnh đầu. Có 11 cạnh trọng số lớn hơn 0: 5 cạnh trọng số 2 được vẽ ra, 6 cạnh trọng số 1 được ẩn. Đường đi qua cả năm đỉnh với tổng trọng số lớn nhất là AAA, AAB, ABB, BBB, BBA, tổng 8, ứng với chuỗi AAABBBA dài 7.
+:::
+
+## Tư tưởng 2: greedy + heap {.smaller}
+
+:::: {.columns}
+::: {.column width="55%"}
+1. Tính overlap của **mọi cặp có hướng một lần**, đẩy hết vào heap: n(n − 1) mục.
+2. Mỗi vòng **pop** mục trên đỉnh (overlap lớn nhất, hoà thì theo ô). Mục không còn hợp lệ thì bỏ qua.
+3. Gộp hai chuỗi vào ô i. **Chỉ tính lại** ô i với các ô còn sống (hai chiều), rồi push.
+4. Lặp **n − 1 vòng** cho đến khi còn một chuỗi.
+:::
+::: {.column width="45%"}
+**Vì sao nhanh:** không quét lại mọi cặp ở mỗi vòng. Trên đồ thị: chọn cạnh nặng nhất từ đỉnh heap, gộp hai đỉnh, chỉ cạnh quanh đỉnh mới phải tính lại.
+
+**Vì sao có thể sai:** chỉ nhìn lợi ích trước mắt. Ví dụ này, kết quả còn phụ thuộc cách heap phá thế hoà (thứ tự ô).
+:::
+::::
+
+::: {.notes}
+"Nặng nhất" nghĩa là trọng số cạnh lớn nhất, tức overlap dài nhất. Thay vì tìm đường đi Hamilton tốt nhất trên toàn đồ thị, mỗi bước chỉ lấy cặp có overlap lớn nhất từ heap và gộp lại. Điểm khác với cách quét toàn bộ: các cặp được tính trước và cất trong heap, sau mỗi lần gộp chỉ tính thêm các cặp liên quan đến chuỗi mới. Chỉ cần n − 1 vòng nên rẻ hơn nhiều so với n giai thừa. Điểm yếu là lựa chọn chỉ dựa trên lợi ích trước mắt.
+:::
+
+## Heap giữ gì, bỏ mục cũ thế nào {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+Mỗi mục trong heap là một bộ năm:
+
+`(−overlap, i, j, ver_i, ver_j)`
+
+- Python chỉ có min-heap, nên đặt dấu trừ để overlap lớn nằm trên cùng.
+- `ver_i`, `ver_j`: phiên bản của hai ô lúc mục được đẩy vào.
+
+Heap không xoá được mục ở giữa. Vì vậy mục cũ **vẫn nằm trong heap** và chỉ bị bỏ khi pop ra.
+:::
+::: {.column width="50%"}
+**Mục pop ra bị bỏ nếu:**
+
+1. ô i hoặc ô j đã dùng (bị gộp mất), hoặc
+2. `ver_i` khác phiên bản hiện tại của ô i, hoặc
+3. `ver_j` khác phiên bản hiện tại của ô j.
+
+Cần phiên bản vì ô i được **dùng lại** cho chuỗi mới: mọi mục cũ chứa ô i đều hết đúng.
+
+Heap ban đầu: 20 mục (kể cả cặp overlap 0), năm mục trên cùng đều có overlap 2.
+:::
+::::
+
+::: {.notes}
+Điểm tinh tế nhất của cách làm này là xoá lười. Khi AAA và AAB gộp lại, các mục cũ chứa chúng vẫn nằm trong heap. Thay vì xoá, ta đánh dấu: ô j thành đã dùng, và tăng phiên bản của ô i. Lúc pop ra mới kiểm tra. Heap có cả cặp overlap 0, nên cuối cùng nếu không còn overlap thật thì cặp overlap 0 được pop và ghép thẳng, không cần bước nối đuôi riêng.
+:::
+
+## Vòng 1: gộp AAA với AAB {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+Năm mục trên cùng của heap. Khoá = (overlap, i, j). Hàng cam là mục được pop.
+
+| Khoá | Cặp |
+|:-:|:--|
+| [(2,0,1)]{.hl} | [AAA → AAB]{.hl} |
+| (2,1,2) | AAB → ABB |
+| (2,2,3) | ABB → BBB |
+| (2,2,4) | ABB → BBA |
+| (2,3,4) | BBB → BBA |
+:::
+::: {.column width="50%"}
+**Pop** (2,0,1): hợp lệ, cả hai ô còn sống. Gộp:
+
+[AAA + AAB → AAAB]{.pick}
+
+Danh sách ô: `[AAAB, –, ABB, BBB, BBA]`. Ô 1 đã dùng, phiên bản ô 0 = 1.
+
+Tính lại ô 0 với ô 2, 3, 4 (hai chiều, 6 lần overlap) và push 6 mục. Các mục chính: AAAB → ABB = 2, AAAB → BBB = 1, AAAB → BBA = 1, BBA → AAAB = 1.
+
+Tiết kiệm 2 ký tự.
+:::
+::::
+
+::: {.notes}
+Mục trên đỉnh là (2, 0, 1): AAA sang AAB. Cả hai ô còn sống, phiên bản đều là 0 nên hợp lệ. Gộp vào ô 0, ô 1 bị đánh dấu đã dùng. Mục (2, 1, 2), AAB sang ABB, từ giờ là mục cũ vì ô 1 đã dùng, nhưng vẫn nằm trong heap. Sau đó chỉ tính lại sáu cặp liên quan ô 0, hai cặp trong số đó có overlap 0 nên cũng được đẩy vào heap.
+:::
+
+## Vòng 2: gộp AAAB với ABB {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+Các mục trên cùng của heap. Hàng cam là mục được pop.
+
+| Khoá | Cặp |
+|:-:|:--|
+| [(2,0,2)]{.hl} | [AAAB → ABB]{.hl} |
+| (2,1,2) | AAB → ABB (cũ, ô 1 đã dùng) |
+| (2,2,3) | ABB → BBB |
+| (2,2,4) | ABB → BBA |
+| (2,3,4) | BBB → BBA |
+:::
+::: {.column width="50%"}
+**Pop** (2,0,2). ABB → BBB cũng có overlap 2, nhưng khoá (2, 2, 3) đứng sau (2, 0, 2) vì **i = 0 nhỏ hơn**. Ô 0 luôn thắng khi hoà.
+
+[AAAB + ABB → AAABB]{.pick}
+
+Danh sách ô: `[AAABB, –, –, BBB, BBA]`. Phiên bản ô 0 = 2.
+
+Tính lại ô 0 với ô 3, 4 (4 lần overlap), push 4 mục: AAABB → BBB = 2, AAABB → BBA = 2, BBA → AAABB = 1, BBB → AAABB = 0.
+
+Tiết kiệm thêm 2 (tổng 4).
+:::
+::::
+
+::: {.notes}
+Chuỗi mới AAAB nằm ở ô 0 nên có chỉ số nhỏ nhất, vì vậy mỗi cặp có ô 0 sẽ thắng các cặp hoà khác. Đó là lý do heap chọn AAAB sang ABB trước ABB sang BBB. Lưu ý cặp (2, 1, 2) vẫn còn trong heap, nhưng nó nằm sau cặp được chọn nên chưa bị pop ra.
+:::
+
+## Vòng 3: gộp AAABB với BBB {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+Ba mục hợp lệ cùng overlap 2. Hàng cam là mục được pop.
+
+| Khoá | Cặp |
+|:-:|:--|
+| [(2,0,3)]{.hl} | [AAABB → BBB]{.hl} |
+| (2,0,4) | AAABB → BBA |
+| (2,3,4) | BBB → BBA |
+
+Khoá so ô i trước, rồi ô j, nên (0, 3) đứng trước (0, 4) và (3, 4).
+:::
+::: {.column width="50%"}
+**Pop** (2,0,3), chỗ rẽ nhánh:
+
+[AAABB + BBB → AAABBB]{.pick}
+
+Danh sách ô: `[AAABBB, –, –, –, BBA]`. Phiên bản ô 0 = 3.
+
+Tính lại ô 0 với ô 4 (2 lần overlap), push 2 mục: AAABBB → BBA = 2, BBA → AAABBB = 1.
+
+Tiết kiệm thêm 2 (tổng 6).
+
+Nếu BBA nằm ở ô 3 và BBB ở ô 4, heap sẽ chọn cặp khác. Xem slide so sánh.
+:::
+::::
+
+::: {.notes}
+Đây là chỗ rẽ nhánh quan trọng nhất, cùng chỗ rẽ với cách quét toàn bộ. Ba cặp cùng overlap 2 và cả ba đều hợp lệ về mặt thuật toán. Heap so ô i trước rồi ô j, nên AAABB với BBB (ô 0 và ô 3) thắng AAABB với BBA (ô 0 và ô 4). May mắn là lựa chọn này dẫn đến kết quả tối ưu. Nếu thứ tự ô khác thì có thể không.
+:::
+
+## Vòng 4: bỏ mục cũ rồi gộp {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+Hai mục cùng khoá (2,0,4), khác phiên bản ô 0:
+
+| Phiên bản ô 0 | Cặp | Xử lý |
+|:-:|:--|:--|
+| 2 | AAABB → BBA | cũ, [bỏ]{.hl} |
+| [3]{.hl} | [AAABBB → BBA]{.hl} | [pop]{.hl} |
+
+Bản cũ được đẩy ở vòng 2. Từ vòng 3, ô 0 đã lên phiên bản 3, nên bản cũ hết đúng.
+:::
+::: {.column width="50%"}
+[AAABBB + BBA → AAABBBA]{.pick}
+
+Chỉ còn một chuỗi sống, nên dừng.
+
+Tiết kiệm 2 + 2 + 2 + 2 = 8.
+
+15 − 8 = **7 ký tự**, bằng đáp án tối ưu (brute-force).
+:::
+::::
+
+::: {.notes}
+Đây là lần duy nhất trong ví dụ mà một mục cũ bị pop ra và bỏ. Hai mục có cùng overlap 2, cùng ô 0 và ô 4, chỉ khác phiên bản của ô 0. Mục cũ chứa chuỗi AAABB đã không còn tồn tại, nên phải bỏ. Nếu không kiểm tra phiên bản, code sẽ ghép nhầm theo thông tin cũ. Kết quả cuối AAABBBA dài 7.
+:::
+
+## Đồ thị co lại qua bốn vòng {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Trước vòng 1** · 5 đỉnh
+
+```{dot}
+//| fig-width: 4.4
+//| fig-height: 1.4
+digraph {
+  rankdir=LR; bgcolor="transparent"; nodesep=0.25; ranksep=0.35;
+  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
+  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
+  AAA -> AAB [color="#B8460F", penwidth=4];
+  AAB -> ABB; ABB -> BBB; ABB -> BBA; BBB -> BBA;
+}
+```
+:::
+::: {.column width="50%"}
+**Trước vòng 2** · 4 đỉnh
+
+```{dot}
+//| fig-width: 4.4
+//| fig-height: 1.4
+digraph {
+  rankdir=LR; bgcolor="transparent"; nodesep=0.25; ranksep=0.35;
+  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
+  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
+  AAAB [fillcolor="#1F5FBF", color="#1F5FBF", fontcolor="white"];
+  AAAB -> ABB [color="#B8460F", penwidth=4];
+  ABB -> BBB; ABB -> BBA; BBB -> BBA;
+}
+```
+:::
+::::
+
+:::: {.columns}
+::: {.column width="50%"}
+**Trước vòng 3** · 3 đỉnh
+
+```{dot}
+//| fig-width: 4.4
+//| fig-height: 1.4
+digraph {
+  rankdir=LR; bgcolor="transparent"; nodesep=0.25; ranksep=0.35;
+  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
+  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
+  AAABB [fillcolor="#1F5FBF", color="#1F5FBF", fontcolor="white"];
+  AAABB -> BBB [color="#B8460F", penwidth=4];
+  AAABB -> BBA; BBB -> BBA;
+}
+```
+:::
+::: {.column width="50%"}
+**Trước vòng 4** · 2 đỉnh
+
+```{dot}
+//| fig-width: 4.4
+//| fig-height: 1.4
+digraph {
+  rankdir=LR; bgcolor="transparent"; nodesep=0.5; ranksep=0.6;
+  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
+  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
+  AAABBB [fillcolor="#1F5FBF", color="#1F5FBF", fontcolor="white"];
+  AAABBB -> BBA [color="#B8460F", penwidth=4];
+}
+```
+:::
+::::
+
+Chỉ vẽ cạnh trọng số 2: [cạnh cam]{.hl} là cạnh heap chọn, ô xanh là chuỗi đã gộp. Số cạnh trọng số 2: 5, 4, 3, rồi 1.
+
+::: {.notes}
+Cùng một trace nhưng nhìn bằng đồ thị. Mỗi vòng, heap chọn cạnh nặng nhất theo khoá (nét cam), gộp hai đỉnh thành một đỉnh mới (ô xanh), rồi chỉ tính lại các cạnh quanh đỉnh mới. Ở vòng 3, có ba cạnh cùng trọng số 2, và khoá chọn cạnh AAABB sang BBB. Nhờ đó BBB không bị bỏ lại, và vòng 4 vẫn nối được BBA bằng overlap.
+:::
+
+## Cùng đầu vào, hai cách xử lý hoà {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Vòng 3: AAABB + BBA** (nếu hoà chọn cặp này)
+
+BBB bị bỏ lại, không còn overlap, phải ghép thẳng ở vòng 4.
+
+`AAABBABBB`
+
+[9]{.big .hl} ký tự, chưa tối ưu
+:::
+::: {.column width="50%"}
+**Vòng 3: AAABB + BBB** (heap chọn theo ô)
+
+Vòng 4: AAABBB + BBA (overlap 2). Mọi chuỗi đều được nối bằng overlap.
+
+`AAABBBA`
+
+[7]{.big .good} ký tự, tối ưu (brute-force 120 hoán vị)
+:::
+::::
+
+**Kết luận:** greedy là heuristic. Kết quả phụ thuộc cách phá thế hoà, mà ở heap thì đó là thứ tự ô trong danh sách.
+
+::: {.notes}
+Slide chốt của phần trace. Cả hai nhánh đều là greedy hợp lệ vì mỗi vòng đều chọn cặp có overlap lớn nhất. Khác biệt duy nhất là chọn cặp nào trong ba cặp hoà ở vòng 3. Một nhánh ra 9, nhánh kia ra 7, và 7 được brute-force xác nhận là tối ưu. Trong code của nhóm, nhánh 7 là nhánh được chọn. Khi test ngẫu nhiên trên 2000 bộ chuỗi nhỏ, kết quả của cách làm này bằng greedy quét toàn bộ ở 1964 bộ, ngắn hơn ở 21 bộ, dài hơn ở 15 bộ.
+:::
+
+## Hai đường đi trên đồ thị {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Nếu hoà chọn AAABB + BBA**
+
+```{dot}
+//| fig-width: 4.4
+//| fig-height: 1.5
+digraph {
+  rankdir=LR; bgcolor="transparent"; nodesep=0.3; ranksep=0.4;
+  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
+  edge [color="#B8460F", penwidth=3, arrowsize=0.7];
+  BBB [style="rounded,dashed", fillcolor="transparent", color="#7C8794"];
+  AAA -> AAB; AAB -> ABB; ABB -> BBA;
+  ABB -> BBB [style=dashed, color="#7C8794", penwidth=1.5];
+  BBB -> BBA [style=dashed, color="#7C8794", penwidth=1.5];
+}
+```
+:::
+::: {.column width="50%"}
+**Heap chọn AAABB + BBB**
+
+```{dot}
+//| fig-width: 4.4
+//| fig-height: 1.5
+digraph {
+  rankdir=LR; bgcolor="transparent"; nodesep=0.3; ranksep=0.4;
+  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
+  edge [color="#1F5FBF", penwidth=3, arrowsize=0.7];
+  AAA -> AAB; AAB -> ABB; ABB -> BBB; BBB -> BBA;
+  ABB -> BBA [style=dashed, color="#7C8794", penwidth=1.5];
+}
+```
+:::
+::::
+
+| | Chọn BBA ở vòng 3 | Heap chọn BBB ở vòng 3 |
+|:--|:--|:--|
+| Đường đi | AAA → AAB → ABB → BBA, rồi ghép thẳng BBB | AAA → AAB → ABB → BBB → BBA |
+| Tổng trọng số | 2 + 2 + 2 = 6 | 2 + 2 + 2 + 2 = 8 |
+| Độ dài | 15 − 6 = [9]{.hl} | 15 − 8 = [7]{.good} |
+
+Nét liền: cạnh được dùng. Nét đứt: cạnh bị bỏ.
+
+::: {.notes}
+Cùng đồ thị, hai đường đi khác nhau. Nhánh trái bỏ BBB lại và phải ghép thẳng: tổng trọng số 6, độ dài 9. Nhánh phải là đường đi tối ưu AAA, AAB, ABB, BBB, BBA, dùng bốn cạnh trọng số 2, tổng 8, độ dài 7. Với ví dụ này, heap cho đúng đường đi Hamilton tối ưu. Nhưng đó là do thứ tự ô, không phải do thuật toán đảm bảo. Tìm đường đi Hamilton tốt nhất là bài toán NP-khó, nên greedy chỉ là heuristic.
+:::
+
+## Điều rút ra từ trace {.smaller}
+
+- **Greedy + heap vẫn là heuristic:** mỗi bước chọn cạnh lớn nhất trước mắt. Ở ví dụ này nó cho đúng 7 ký tự, nhưng kết quả phụ thuộc thứ tự ô khi hoà.
+- **Hamilton tối ưu là NP-khó:** greedy đổi lấy tốc độ, chấp nhận có khi không tối ưu.
+- **Số lần tính overlap:** heap tính 20 cặp ban đầu, rồi 6, 4, 2, 0 sau mỗi vòng, tổng [32]{.good}. Cách quét lại toàn bộ cần 40.
+- **Công thức:** n(n − 1) + (n − 1)(n − 2) = 2(n − 1)², cỡ n² lần tính overlap, so với cỡ n³ của cách quét lại. Đây là điểm nối sang phần độ phức tạp.
+
+::: {.notes}
+Với n = 5, hiệu số còn nhỏ (32 so với 40), nhưng tăng nhanh theo n: khi n = 200, cách quét lại cần khoảng 2,67 triệu lần tính overlap, còn heap khoảng 79 nghìn lần. Lưu ý khi sang phần độ phức tạp: n² là số lần tính overlap, còn mỗi lần gọi còn tốn thời gian tỉ lệ với độ dài hai chuỗi, và chuỗi gộp có thể dài tới n·L. Heap thêm bộ nhớ O(n²) cho các mục.
+:::
