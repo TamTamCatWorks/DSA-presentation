@@ -1,458 +1,494 @@
-## Bài toán và bốn quy ước {.smaller}
-
-**Đầu vào:** tập n chuỗi. Ví dụ xuyên suốt: `AAA, AAB, ABB, BBB, BBA`.
-
-**Đầu ra:** chuỗi ngắn nhất chứa mọi chuỗi đầu vào như một chuỗi con **liên tiếp** (Shortest Common *Superstring*).
-
-Bốn quy ước của phần trace (đúng như `SCS.py`):
-
-1. Loại trước mọi chuỗi đã nằm trọn trong chuỗi khác.
-2. `overlap(a, b)` là hậu tố (suffix) dài nhất của a trùng với tiền tố (prefix) của b.
-3. Luật xử lý hoà: mọi cặp có hướng (i, j) được đưa vào một **heap** với khoá (overlap lớn trước, rồi [ô i nhỏ trước, ô j nhỏ trước]{.hl}).
-4. Gộp: chuỗi mới nằm ở [ô i]{.hl}, ô j bị đánh dấu **đã dùng**, phiên bản của ô i tăng thêm 1.
+## Ví dụ minh hoạ {.smaller}
 
 ```{=html}
 <style>
 .hl { color:#B8460F; font-weight:700; }
 .good { color:#1F5FBF; font-weight:700; }
-.pick { display:inline-block; font-family:monospace; font-weight:700; color:#8F3508; background:#FBE3D3; border-radius:8px; padding:2px 12px; }
-.big { font-size:2.4em; font-weight:700; line-height:1.1; }
+.ht-str { display:inline-block; font-family:"Courier New",monospace; font-weight:700; background:#E4E9F3; border:1.5px solid #9FB0D3; border-radius:8px; padding:2px 12px; margin:2px 3px; }
+.ht-chip { display:inline-block; font-family:"Courier New",monospace; font-weight:700; font-size:0.82em; color:#1F5FBF; border:1.5px solid #1F5FBF; border-radius:999px; padding:1px 10px; margin:3px 2px; }
+.ht-chip.on { color:white; background:#B8460F; border-color:#B8460F; }
+.ht-aln { font-family:"Courier New",monospace; font-weight:700; font-size:1.15em; line-height:1.25; display:inline-block; background:#F6F7F9; border-radius:10px; padding:8px 20px; margin:4px 0; vertical-align:middle; }
+.ht-aln .row { display:block; white-space:pre; }
+.ht-aln .ov { background:#FBE3D3; color:#8F3508; border-radius:3px; }
+.ht-aln .res { border-top:2px solid #1B2430; margin-top:3px; padding-top:2px; color:#1F5FBF; }
+.ht-aln .top { border-bottom:2px solid #1B2430; margin-bottom:3px; padding-bottom:2px; color:#1F5FBF; }
+.ht-graph { display:block; margin:0 auto; }
+.ht-step { font-size:0.62em; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#B8460F; }
+.ht-box { background:#F6F7F9; border-left:4px solid #1F5FBF; border-radius:6px; padding:8px 14px; margin-top:8px; }
+.ht-box.warn { border-left-color:#B8460F; }
+.ht-ok { color:#1E7A3C; font-weight:700; } .ht-no { color:#B42318; font-weight:700; }
+.reveal table.ht-ov td, .reveal table.ht-ov th { padding:4px 14px; font-family:"Courier New",monospace; font-weight:700; }
+.reveal table.ht-ov td.two { background:#DCE6F7; color:#1F5FBF; }
+.reveal table.ht-ov td.dash { color:#B5BCC6; }
+.reveal table.ht-ov td.zero { color:#9AA4B1; font-weight:400; }
+.reveal pre.ht-code, .reveal div.sourceCode.ht-code pre { font-size:0.52em; line-height:1.3; margin:4px 0; }
+.reveal div.sourceCode.ht-code { margin:4px 0; }
 </style>
 ```
 
+<span class="ht-step">Trace bằng tay</span>
+
+**Đầu vào**: <span class="ht-str">AAA</span> <span class="ht-str">AAB</span> <span class="ht-str">ABB</span> <span class="ht-str">BBB</span> <span class="ht-str">BBA</span>
+
+**Đầu ra:** chuỗi ngắn nhất chứa cả 5 chuỗi như chuỗi con **liền nhau**.
+
+**Cách ngây thơ:** nối thẳng, không chồng lấp
+
+<span class="ht-aln"><span style="color:#1F5FBF">AAA</span><span style="color:#B8460F">AAB</span><span style="color:#1F5FBF">ABB</span><span style="color:#B8460F">BBB</span><span style="color:#1F5FBF">BBA</span></span> → [15 ký tự]{.hl}
+
+Muốn ngắn hơn: cho đuôi chuỗi trước **chồng lên** đầu chuỗi sau.
+
+Lộ trình trace:
+
+1. Phần A: Đồ thị chồng lấp và đường đi Hamilton (cách tìm **chính xác**)
+2. Phần B: Greedy heuristic: (cách tìm **nhanh**) 
+3. Phần C: So sánh hai cách
+
 ::: {.notes}
-Nói rõ bốn quy ước trước khi trace, vì kết quả phụ thuộc vào chúng. Quy ước 3 (heap và luật hoà) và quy ước 4 (gộp vào ô i, đánh dấu ô j) là hai điểm quyết định thứ tự gộp. Lưu ý tên bài toán: Superstring (chuỗi con liên tiếp), không phải Substring. Ví dụ lấy từ tài liệu của Langmead.
+Giới thiệu ví dụ: 5 chuỗi độ dài 3, lấy đúng từ bài giảng của Ben Langmead. Nối thẳng thì được 15 ký tự. Mục tiêu là chồng các chuỗi lên nhau để ngắn hơn. Phần trace đi theo đúng mạch bài giảng: trước hết mô hình hoá bằng đồ thị chồng lấp và đường đi Hamilton, sau đó mới đến greedy, cuối cùng so sánh hai cách.
 :::
 
-## Hướng làm 1: đường đi Hamilton {.smaller}
+## A · Tính overlap(a, b) {.smaller}
+
+<span class="ht-step">Phần A · Đồ thị chồng lấp và đường đi Hamilton</span>
+
+`overlap(a, b)` = độ dài **hậu tố dài nhất của a** trùng với **tiền tố của b** (tối thiểu k = 1). Thử k từ lớn xuống nhỏ, gặp khớp thì dừng.
 
 :::: {.columns}
-::: {.column width="52%"}
-1. Mỗi thứ tự ghép n chuỗi là một **đường đi qua mọi đỉnh đúng một lần** trên đồ thị chồng lấp.
-2. Ghép a ngay trước b tiết kiệm `overlap(a, b)` ký tự, chính là **trọng số cạnh** a → b.
-3. Chọn đường đi có **tổng trọng số lớn nhất**. Độ dài kết quả = tổng độ dài các chuỗi − tổng trọng số.
-4. Greedy dựng đường đi này bằng cách **chốt dần từng cạnh nặng nhất**. Heap giúp lấy cạnh nặng nhất mà không phải quét lại toàn đồ thị.
+::: {.column width="50%"}
+**AAB → ABB**
+
+| k | hậu tố của AAB | tiền tố của ABB | |
+|:-:|:-:|:-:|:-:|
+| 3 | `AAB` | `ABB` | [lệch]{.ht-no} |
+| 2 | `AB` | `AB` | [khớp]{.ht-ok} |
+
+overlap = [2]{.hl}
+
+<span class="ht-aln"><span class="row">A<span class="ov">AB</span></span><span class="row">&nbsp;<span class="ov">AB</span>B</span><span class="row res">AABB</span></span>
 :::
-::: {.column width="48%"}
-Tìm chính xác thì tốn kém:
+::: {.column width="50%"}
+::: {.fragment}
+**ABB → AAB** (đảo chiều)
 
-| n | n! (mọi hoán vị) | 2ⁿ·n² (DP bitmask) |
-|:-:|:-:|:-:|
-| 5 | 120 | 800 |
-| 10 | 3.628.800 | 102.400 |
-| 20 | ≈ 2,4 × 10¹⁸ | ≈ 4,2 × 10⁸ |
+| k | hậu tố của ABB | tiền tố của AAB | |
+|:-:|:-:|:-:|:-:|
+| 3 | `ABB` | `AAB` | [lệch]{.ht-no} |
+| 2 | `BB` | `AA` | [lệch]{.ht-no} |
+| 1 | `B` | `A` | [lệch]{.ht-no} |
 
-Bài toán **NP-khó**: với n lớn không thể tìm chính xác.
+overlap = [0]{.hl}
+
+<div class="ht-box">Đảo chiều: overlap(a, b) ≠ overlap(b, a), nên phải xét <b>cặp có hướng</b>.</div>
+:::
 :::
 ::::
 
 ::: {.notes}
-Biến việc ghép chuỗi thành việc chọn thứ tự. Mỗi lần ghép a trước b tiết kiệm đúng overlap(a, b) ký tự, nên tổng độ dài giảm bằng tổng trọng số các cạnh trên đường đi. Muốn ngắn nhất thì chọn đường đi có tổng trọng số lớn nhất. Cách chính xác là thử n! hoán vị hoặc quy hoạch động theo tập con (kiểu Held-Karp). Với n = 20, n! cỡ 2,4 nhân 10 mũ 18, còn bitmask cỡ 4 nhân 10 mũ 8. Bài toán NP-khó nên cả hai đều không dùng được khi n lớn, đó là lý do cần greedy. Mỗi lần gộp hai chuỗi chính là chốt một cạnh của đường đi.
+Minh hoạ cách tính overlap bằng cách thử từng độ dài l. AAB sang ABB: l = 3 thì AAB khác ABB, l = 2 thì AB trùng AB, nên overlap là 2, ghép được AABB. Đảo chiều, ABB sang AAB: không có l nào khớp, overlap bằng 0. Overlap không đối xứng, nên với n chuỗi có n(n − 1) cặp có hướng, ở đây là 20. Tham số k là overlap tối thiểu, giống tham số min_length trong code của Langmead; ở ví dụ này k = 1.
 :::
 
-## Bảng overlap và năm cặp hoà {.smaller}
+## A · Bảng overlap của 20 cặp {.smaller}
 
 :::: {.columns}
-::: {.column width="58%"}
-Hàng a, cột b: `overlap(a, b)`
+::: {.column width="60%"}
+Hàng = chuỗi **đứng trước**, cột = chuỗi **đứng sau**.
 
-| a → b | AAA | AAB | ABB | BBB | BBA |
-|:--|:-:|:-:|:-:|:-:|:-:|
-| **AAA** (0) | – | [2]{.hl} | 1 | 0 | 0 |
-| **AAB** (1) | 0 | – | [2]{.hl} | 1 | 1 |
-| **ABB** (2) | 0 | 0 | – | [2]{.hl} | [2]{.hl} |
-| **BBB** (3) | 0 | 0 | 0 | – | [2]{.hl} |
-| **BBA** (4) | 1 | 1 | 1 | 0 | – |
+<table class="ht-ov"><tr><th>a → b</th><th>AAA</th><th>AAB</th><th>ABB</th><th>BBB</th><th>BBA</th></tr><tr><th>AAA</th><td class="dash">–</td><td class="two">2</td><td class="">1</td><td class="zero">0</td><td class="zero">0</td></tr><tr><th>AAB</th><td class="zero">0</td><td class="dash">–</td><td class="two">2</td><td class="">1</td><td class="">1</td></tr><tr><th>ABB</th><td class="zero">0</td><td class="zero">0</td><td class="dash">–</td><td class="two">2</td><td class="two">2</td></tr><tr><th>BBB</th><td class="zero">0</td><td class="zero">0</td><td class="zero">0</td><td class="dash">–</td><td class="two">2</td></tr><tr><th>BBA</th><td class="">1</td><td class="">1</td><td class="">1</td><td class="zero">0</td><td class="dash">–</td></tr></table>
 :::
-::: {.column width="42%"}
-**Năm cạnh cùng trọng số 2**
+::: {.column width="40%"}
+- 5 cặp có overlap **2** ([ô xanh]{.good})
+- 6 cặp có overlap 1
+- Còn lại là 0
 
-- AAA → AAB, khoá (2, 0, 1)
-- AAB → ABB, khoá (2, 1, 2)
-- ABB → BBB, khoá (2, 2, 3)
-- ABB → BBA, khoá (2, 2, 4)
-- BBB → BBA, khoá (2, 3, 4)
-
-Heap phải có luật chọn khi hoà. Với khoá (overlap, i, j), cạnh [AAA → AAB]{.hl} đứng đầu nên được chọn trước.
-
-Đáp án tối ưu (brute-force 120 hoán vị): **7 ký tự**.
+<div class="ht-box">Bảng này chính là <b>ma trận kề</b> của đồ thị chồng lấp ở slide sau.</div>
 :::
 ::::
 
 ::: {.notes}
-Hàng là chuỗi đứng trước, cột là chuỗi đứng sau, số trong ngoặc là chỉ số ô. Bảng không đối xứng. Điểm mấu chốt: có tới năm cạnh cùng trọng số 2, nên cần luật chọn khi hoà. Trong code, luật này nằm ngay ở khoá của heap: so overlap trước, bằng nhau thì so ô i, rồi ô j. Nhắc trước rằng đáp án tối ưu là 7 để người nghe so sánh với kết quả ở các slide sau.
+Tính overlap cho cả 20 cặp có hướng. Bảng không đối xứng. Năm ô xanh có overlap 2, sáu ô có overlap 1. Mỗi ô khác 0 sẽ thành một cạnh có trọng số trong đồ thị chồng lấp.
 :::
 
-## Đồ thị chồng lấp của AAA / BBB {.smaller}
+## A · Đồ thị chồng lấp {.smaller}
 
 :::: {.columns}
 ::: {.column width="62%"}
-```{dot}
-//| fig-width: 6
-//| fig-height: 2.4
-digraph {
-  rankdir=LR; bgcolor="transparent"; nodesep=0.4; ranksep=0.55;
-  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=18, fontcolor="#1B2430", penwidth=1.5];
-  edge [color="#1F5FBF", fontcolor="#1F5FBF", fontname="monospace", fontsize=16, penwidth=2];
-  AAA -> AAB [label="2"];
-  AAB -> ABB [label="2"];
-  ABB -> BBB [label="2"];
-  ABB -> BBA [label="2"];
-  BBB -> BBA [label="2"];
-}
+```{=html}
+<svg class="ht-graph" viewBox="-30 -48 700 432" width="100%" style="max-height:396px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g1-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g1-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g1-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g1-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M118.0,120.4 Q320.0,100.0 521.0,120.3" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g1-g)"/><path d="M311.3,38.8 Q261.8,180.1 176.1,296.8" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g1-g)"/><path d="M337.9,38.4 Q424.2,155.9 473.4,296.2" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g1-g)"/><path d="M427.0,303.3 Q261.4,247.6 101.8,150.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g1-g)"/><path d="M464.5,297.6 Q378.2,180.1 329.0,39.8" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g1-g)"/><path d="M487.9,297.1 Q506.6,212.6 557.0,151.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g1-g)"/><path d="M97.5,102.3 Q180.8,46.2 263.5,27.1" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g1-b)"/><path d="M375.5,26.8 Q459.2,46.2 541.7,101.8" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g1-b)"/><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g1-b)"/><path d="M572.1,150.9 Q553.4,235.4 503.0,296.9" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g1-b)"/><path d="M213.2,313.1 Q320.0,296.0 425.9,312.9" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g1-b)"/><g><circle cx="180.7" cy="55.4" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="180.7" y="55.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="319.8" cy="110.2" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="319.8" y="110.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="458.9" cy="55.2" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="458.9" y="55.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="252.8" cy="174.0" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="252.8" y="174.0" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="414.9" cy="161.6" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="414.9" y="161.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="377.6" cy="236.9" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="545.5" cy="229.6" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="545.5" y="229.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="319.8" cy="304.5" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="319.8" y="304.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="262.9" cy="237.1" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="262.9" y="237.1" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="387.5" cy="174.4" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="387.5" y="174.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="514.5" cy="218.4" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="514.5" y="218.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><rect x="9.8" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAA</text><rect x="267.4" y="-8.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="15.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAB</text><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text></svg>
 ```
-
-Chỉ vẽ 5 cạnh trọng số 2, ẩn các cạnh trọng số 1.
 :::
 ::: {.column width="38%"}
-**5 đỉnh, 11 cạnh**
-
 - **Đỉnh:** mỗi chuỗi
-- **Cạnh a → b:** trọng số là `overlap(a, b)`
-- **Đáp án:** đường đi Hamilton có tổng trọng số lớn nhất
+- **Cạnh a → b:** trọng số `overlap(a, b)`, chỉ vẽ cạnh > 0 (11 cạnh)
+- [Cạnh xanh]{.good}: trọng số 2. Cạnh xám: trọng số 1.
 
-Đường đi tốt nhất: AAA → AAB → ABB → BBB → BBA, tổng 2+2+2+2 = 8, nên độ dài là 15 − 8 = [7]{.good}.
+<div class="ht-box">Ghép a ngay trước b thì <b>tiết kiệm</b> được overlap(a, b) ký tự, là trọng số cạnh a → b.</div>
 :::
 ::::
 
 ::: {.notes}
-Bảng overlap ở slide trước chính là ma trận kề của đồ thị này. Bài toán cần đường đi, không cần chu trình vì không phải quay về đỉnh đầu. Có 11 cạnh trọng số lớn hơn 0: 5 cạnh trọng số 2 được vẽ ra, 6 cạnh trọng số 1 được ẩn. Đường đi qua cả năm đỉnh với tổng trọng số lớn nhất là AAA, AAB, ABB, BBB, BBA, tổng 8, ứng với chuỗi AAABBBA dài 7.
+Cùng thông tin với bảng, nhưng dưới dạng đồ thị có hướng, có trọng số. Ý nghĩa của trọng số: nếu đặt a ngay trước b, hai chuỗi chồng lên nhau đúng overlap(a, b) ký tự, nên superstring ngắn đi bấy nhiêu. Vị trí 5 đỉnh được giữ cố định trong mọi slide sau để dễ theo dõi.
 :::
 
-## Tư tưởng 2: greedy + heap {.smaller}
+## A · Thứ tự = đường đi Hamilton {.smaller}
+
+Một **thứ tự ghép** = một **đường đi qua mọi đỉnh đúng một lần**.
+
+:::: {.columns}
+::: {.column width="50%"}
+**Thứ tự 1:** [BBA → AAA → AAB → ABB → BBB]{style="font-size:0.85em"}
+
+```{=html}
+<svg class="ht-graph" viewBox="-30 -48 700 432" width="100%" style="max-height:252px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g2-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g2-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g2-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g2-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M97.5,102.3 Q180.8,46.2 263.5,27.1" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g2-o)"/><path d="M375.5,26.8 Q459.2,46.2 541.7,101.8" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g2-o)"/><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g2-o)"/><path d="M427.0,303.3 Q261.4,247.6 101.8,150.1" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g2-o)"/><g><circle cx="180.7" cy="55.4" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="180.7" y="55.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="458.9" cy="55.2" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="458.9" y="55.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="377.6" cy="236.9" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="262.9" cy="237.1" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="262.9" y="237.1" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">1</text></g><rect x="9.8" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAA</text><rect x="267.4" y="-8.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="15.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAB</text><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text></svg>
+```
+
+Trọng số: 1 + 2 + 2 + 2 = 7
+
+<span class="ht-aln">BBAAABBB</span> [8 ký tự]{.hl}
+:::
+::: {.column width="50%"}
+::: {.fragment}
+**Thứ tự 2:** [AAA → AAB → ABB → BBB → BBA]{style="font-size:0.85em"}
+
+```{=html}
+<svg class="ht-graph" viewBox="-30 -48 700 432" width="100%" style="max-height:252px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g3-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g3-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g3-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g3-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M97.5,102.3 Q180.8,46.2 263.5,27.1" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g3-o)"/><path d="M375.5,26.8 Q459.2,46.2 541.7,101.8" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g3-o)"/><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g3-o)"/><path d="M213.2,313.1 Q320.0,296.0 425.9,312.9" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g3-o)"/><g><circle cx="180.7" cy="55.4" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="180.7" y="55.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="458.9" cy="55.2" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="458.9" y="55.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="377.6" cy="236.9" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="319.8" cy="304.5" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="319.8" y="304.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><rect x="9.8" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAA</text><rect x="267.4" y="-8.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="15.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAB</text><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text></svg>
+```
+
+Trọng số: 2 + 2 + 2 + 2 = 8
+
+<span class="ht-aln">AAABBBA</span> [7 ký tự]{.good}
+:::
+:::
+::::
+
+<div class="ht-box"><b>Độ dài = 15 − tổng trọng số đường đi.</b> Ngắn nhất ⇔ đường đi Hamilton <b>nặng nhất</b>.</div>
+
+::: {.notes}
+Đây là ý quan trọng nhất của phần A. Bất kỳ thứ tự ghép nào cũng tương ứng với một đường đi đi qua mọi đỉnh đúng một lần, gọi là đường đi Hamilton. Mỗi cạnh trên đường đi tiết kiệm đúng trọng số của nó. Thứ tự 1 có tổng trọng số 7 nên được 8 ký tự; thứ tự 2 có tổng 8 nên được 7 ký tự. Vậy bài toán superstring ngắn nhất trở thành: tìm đường đi Hamilton có tổng trọng số lớn nhất.
+:::
+
+## A · Vét cạn: thử mọi thứ tự {.smaller}
+
+:::: {.columns}
+::: {.column width="48%"}
+Số thứ tự (số đường đi Hamilton) với 5 chuỗi: **5! = 120**. Ghép thử từng thứ tự:
+
+```{=html}
+<svg class="ht-graph" viewBox="0 0 544 250" width="100%" style="max-height:290px" role="img" aria-label="Phân bố độ dài superstring của 120 thứ tự"><rect x="20" y="192.9" width="44" height="7.1" rx="4" fill="#1F5FBF"/><text x="42" y="185.9" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#1F5FBF">1</text><text x="42" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">7</text><rect x="76" y="171.7" width="44" height="28.3" rx="4" fill="#C9D3E3"/><text x="98" y="164.7" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">4</text><text x="98" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">8</text><rect x="132" y="157.5" width="44" height="42.5" rx="4" fill="#C9D3E3"/><text x="154" y="150.5" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">6</text><text x="154" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">9</text><rect x="188" y="79.6" width="44" height="120.4" rx="4" fill="#C9D3E3"/><text x="210" y="72.6" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">17</text><text x="210" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">10</text><rect x="244" y="37.1" width="44" height="162.9" rx="4" fill="#C9D3E3"/><text x="266" y="30.1" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">23</text><text x="266" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">11</text><rect x="300" y="30.0" width="44" height="170.0" rx="4" fill="#C9D3E3"/><text x="322" y="23.0" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">24</text><text x="322" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">12</text><rect x="356" y="30.0" width="44" height="170.0" rx="4" fill="#C9D3E3"/><text x="378" y="23.0" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">24</text><text x="378" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">13</text><rect x="412" y="93.8" width="44" height="106.2" rx="4" fill="#C9D3E3"/><text x="434" y="86.8" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">15</text><text x="434" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">14</text><rect x="468" y="157.5" width="44" height="42.5" rx="4" fill="#C9D3E3"/><text x="490" y="150.5" text-anchor="middle" font-family="Arial" font-weight="700" font-size="16" fill="#5E6875">6</text><text x="490" y="222" text-anchor="middle" font-family="Arial" font-size="16" fill="#1B2430">15</text><text x="272" y="246" text-anchor="middle" font-family="Arial" font-size="15" fill="#5E6875">độ dài superstring</text></svg>
+```
+
+Ngắn nhất là [7 ký tự]{.good}, và chỉ **1/120** thứ tự đạt được: AAA → AAB → ABB → BBB → BBA.
+:::
+::: {.column width="52%"}
+
+::: {.fragment}
+**Số thứ tự:** 5! = 120 · 10! ≈ 3,6 triệu · 20! ≈ 2,4 × 10¹⁸
+
+<div class="ht-box warn">Luôn đúng nhưng <b>bùng nổ giai thừa</b>. Tìm đường đi Hamilton nặng nhất là bài toán NP-khó.</div>
+:::
+:::
+::::
+
+::: {.notes}
+Cách chính xác: thử mọi thứ tự, tức mọi đường đi Hamilton, rồi giữ superstring ngắn nhất. Biểu đồ cho thấy 120 thứ tự cho ra độ dài từ 7 đến 15; chỉ đúng một thứ tự đạt 7, là AAA, AAB, ABB, BBB, BBA. Với 5 chuỗi thì 120 lần thử là nhẹ, nhưng n! tăng cực nhanh: 20 chuỗi đã là 2,4 nhân 10 mũ 18. Bài toán NP-khó, nên với dữ liệu thật (hàng triệu read trong lắp ráp hệ gen) không thể vét cạn. Đó là lý do cần greedy.
+:::
+
+## B · Ý tưởng greedy {.smaller}
+
+<span class="ht-step">Phần B · Greedy heuristic</span>
+
+:::: {.columns}
+::: {.column width="100%"}
+**Mỗi vòng:**
+
+1. Tìm cặp (a, b) overlap **lớn nhất** (≥ k).
+2. Xoá a, b; **thêm chuỗi gộp vào cuối**.
+3. Hết cặp overlap ≥ k thì **nối thẳng** phần còn lại.
+
+Nếu **hoà**: giữ **cặp duyệt tới đầu tiên** (so sánh `>`).
+
+<div class="ht-box"><b>Trên đồ thị:</b> chọn cạnh nặng nhất, co hai đỉnh thành một.</div>
+:::
+::::
+
+::: {.notes}
+Thay vì xét cả đường đi, greedy chỉ nhìn lợi ích trước mắt: mỗi vòng gộp cặp chồng lấp nhiều nhất. Ba chi tiết của code ảnh hưởng tới trace: chuỗi gộp được thêm vào cuối danh sách; khi hoà, cặp được duyệt trước thắng vì điều kiện là lớn hơn hẳn; và khi không còn overlap nào thì các chuỗi còn lại được nối thẳng. Trên đồ thị, mỗi vòng là chọn cạnh nặng nhất và co hai đỉnh lại.
+:::
+
+## B · Vòng 1/4: gộp AAA + AAB {.smaller}
 
 :::: {.columns}
 ::: {.column width="55%"}
-1. Tính overlap của **mọi cặp có hướng một lần**, đẩy hết vào heap: n(n − 1) mục.
-2. Mỗi vòng **pop** mục trên đỉnh (overlap lớn nhất, hoà thì theo ô). Mục không còn hợp lệ thì bỏ qua.
-3. Gộp hai chuỗi vào ô i. **Chỉ tính lại** ô i với các ô còn sống (hai chiều), rồi push.
-4. Lặp **n − 1 vòng** cho đến khi còn một chuỗi.
+```{=html}
+<svg class="ht-graph" viewBox="-30 -48 700 432" width="100%" style="max-height:384px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g4-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g4-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g4-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g4-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M118.0,120.4 Q320.0,100.0 521.0,120.3" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g4-g)"/><path d="M311.3,38.8 Q261.8,180.1 176.1,296.8" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g4-g)"/><path d="M337.9,38.4 Q424.2,155.9 473.4,296.2" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g4-g)"/><path d="M427.0,303.3 Q261.4,247.6 101.8,150.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g4-g)"/><path d="M464.5,297.6 Q378.2,180.1 329.0,39.8" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g4-g)"/><path d="M487.9,297.1 Q506.6,212.6 557.0,151.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g4-g)"/><path d="M375.5,26.8 Q459.2,46.2 541.7,101.8" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g4-b)"/><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g4-b)"/><path d="M572.1,150.9 Q553.4,235.4 503.0,296.9" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g4-b)"/><path d="M213.2,313.1 Q320.0,296.0 425.9,312.9" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g4-b)"/><path d="M97.5,102.3 Q180.8,46.2 263.5,27.1" fill="none" stroke="#B8460F" stroke-width="5" marker-end="url(#g4-o)"/><g><circle cx="180.7" cy="55.4" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="180.7" y="55.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="319.8" cy="110.2" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="319.8" y="110.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="458.9" cy="55.2" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="458.9" y="55.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="252.8" cy="174.0" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="252.8" y="174.0" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="414.9" cy="161.6" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="414.9" y="161.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="377.6" cy="236.9" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="545.5" cy="229.6" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="545.5" y="229.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="319.8" cy="304.5" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="319.8" y="304.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="262.9" cy="237.1" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="262.9" y="237.1" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="387.5" cy="174.4" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="387.5" y="174.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="514.5" cy="218.4" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="514.5" y="218.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><rect x="9.8" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAA</text><rect x="267.4" y="-8.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="15.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAB</text><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text></svg>
+```
+
+Danh sách: [`AAA`, `AAB`, `ABB`, `BBB`, `BBA`]
 :::
 ::: {.column width="45%"}
-**Vì sao nhanh:** không quét lại mọi cặp ở mỗi vòng. Trên đồ thị: chọn cạnh nặng nhất từ đỉnh heap, gộp hai đỉnh, chỉ cạnh quanh đỉnh mới phải tính lại.
+**Ứng viên:** 5 cạnh hoà ở trọng số 2 (theo thứ tự duyệt)
 
-**Vì sao có thể sai:** chỉ nhìn lợi ích trước mắt. Ví dụ này, kết quả còn phụ thuộc cách heap phá thế hoà (thứ tự ô).
+<span class="ht-chip on">AAA → AAB</span> <span class="ht-chip">AAB → ABB</span> <span class="ht-chip">ABB → BBB</span> <span class="ht-chip">ABB → BBA</span> <span class="ht-chip">BBB → BBA</span>
+
+::: {.fragment}
+**Chọn** [AAA → AAB]{.hl}. Cặp được duyệt **đầu tiên** trong danh sách hiện tại.
+
+<span class="ht-aln"><span class="row">A<span class="ov">AA</span></span><span class="row">&nbsp;<span class="ov">AA</span>B</span><span class="row res">AAAB</span></span>
+:::
+
+::: {.fragment}
+Danh sách mới: [`ABB`, `BBB`, `BBA`, `AAAB`]
+
+Tổng độ dài: 15 → [13]{.good} (tiết kiệm 2, cộng dồn 2)
+:::
 :::
 ::::
 
 ::: {.notes}
-"Nặng nhất" nghĩa là trọng số cạnh lớn nhất, tức overlap dài nhất. Thay vì tìm đường đi Hamilton tốt nhất trên toàn đồ thị, mỗi bước chỉ lấy cặp có overlap lớn nhất từ heap và gộp lại. Điểm khác với cách quét toàn bộ: các cặp được tính trước và cất trong heap, sau mỗi lần gộp chỉ tính thêm các cặp liên quan đến chuỗi mới. Chỉ cần n − 1 vòng nên rẻ hơn nhiều so với n giai thừa. Điểm yếu là lựa chọn chỉ dựa trên lợi ích trước mắt.
+Danh sách đầu vào theo thứ tự AAA, AAB, ABB, BBB, BBA. Có năm cạnh cùng trọng số 2. Code duyệt các cặp theo thứ tự danh sách, nên cặp AAA, AAB được gặp đầu tiên và giữ lại. Gộp thành AAAB và đưa xuống cuối danh sách. Tổng độ dài giảm đúng bằng overlap: 15 xuống 13.
 :::
 
-## Heap giữ gì, bỏ mục cũ thế nào {.smaller}
+## B · Vòng 2/4: gộp ABB + BBB {.smaller}
 
 :::: {.columns}
-::: {.column width="50%"}
-Mỗi mục trong heap là một bộ năm:
+::: {.column width="55%"}
+```{=html}
+<svg class="ht-graph" viewBox="-42 64 713 320" width="100%" style="max-height:384px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g5-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g5-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g5-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g5-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M487.9,297.1 Q506.6,212.6 557.0,151.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g5-g)"/><path d="M427.0,303.3 Q261.4,247.6 101.8,150.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g5-g)"/><path d="M82.3,150.3 Q133.4,212.6 151.9,296.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g5-g)"/><path d="M130.0,148.8 Q283.4,200.4 443.0,297.9" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g5-g)"/><path d="M572.1,150.9 Q553.4,235.4 503.0,296.9" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g5-b)"/><path d="M213.2,313.1 Q320.0,296.0 425.9,312.9" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g5-b)"/><path d="M130.2,119.2 Q320.0,100.0 521.0,120.3" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g5-b)"/><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#B8460F" stroke-width="5" marker-end="url(#g5-o)"/><g><circle cx="377.6" cy="236.9" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="545.5" cy="229.6" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="545.5" y="229.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="319.8" cy="304.5" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="319.8" y="304.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="514.5" cy="218.4" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="514.5" y="218.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="262.9" cy="237.1" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="262.9" y="237.1" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="322.8" cy="109.9" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="322.8" y="109.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="125.2" cy="217.9" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="125.2" y="217.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="285.0" cy="211.9" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="285.0" y="211.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text><rect x="-2.4" y="104.0" width="129.6" height="44.0" rx="9" fill="#1F5FBF" stroke="#1F5FBF" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="white">AAAB</text></svg>
+```
 
-`(−overlap, i, j, ver_i, ver_j)`
-
-- Python chỉ có min-heap, nên đặt dấu trừ để overlap lớn nằm trên cùng.
-- `ver_i`, `ver_j`: phiên bản của hai ô lúc mục được đẩy vào.
-
-Heap không xoá được mục ở giữa. Vì vậy mục cũ **vẫn nằm trong heap** và chỉ bị bỏ khi pop ra.
+Danh sách: [`ABB`, `BBB`, `BBA`, `AAAB`]
 :::
-::: {.column width="50%"}
-**Mục pop ra bị bỏ nếu:**
+::: {.column width="45%"}
+**Ứng viên:** 4 cạnh hoà ở trọng số 2 (theo thứ tự duyệt)
 
-1. ô i hoặc ô j đã dùng (bị gộp mất), hoặc
-2. `ver_i` khác phiên bản hiện tại của ô i, hoặc
-3. `ver_j` khác phiên bản hiện tại của ô j.
+<span class="ht-chip on">ABB → BBB</span> <span class="ht-chip">ABB → BBA</span> <span class="ht-chip">BBB → BBA</span> <span class="ht-chip">AAAB → ABB</span>
 
-Cần phiên bản vì ô i được **dùng lại** cho chuỗi mới: mọi mục cũ chứa ô i đều hết đúng.
+::: {.fragment}
+**Chọn** [ABB → BBB]{.hl}. Cặp được duyệt **đầu tiên** trong danh sách hiện tại.
 
-Heap ban đầu: 20 mục (kể cả cặp overlap 0), năm mục trên cùng đều có overlap 2.
+<span class="ht-aln"><span class="row">A<span class="ov">BB</span></span><span class="row">&nbsp;<span class="ov">BB</span>B</span><span class="row res">ABBB</span></span>
+:::
+
+::: {.fragment}
+Danh sách mới: [`BBA`, `AAAB`, `ABBB`]
+
+Tổng độ dài: 13 → [11]{.good} (tiết kiệm 2, cộng dồn 4)
+:::
 :::
 ::::
 
 ::: {.notes}
-Điểm tinh tế nhất của cách làm này là xoá lười. Khi AAA và AAB gộp lại, các mục cũ chứa chúng vẫn nằm trong heap. Thay vì xoá, ta đánh dấu: ô j thành đã dùng, và tăng phiên bản của ô i. Lúc pop ra mới kiểm tra. Heap có cả cặp overlap 0, nên cuối cùng nếu không còn overlap thật thì cặp overlap 0 được pop và ghép thẳng, không cần bước nối đuôi riêng.
+Danh sách bây giờ là ABB, BBB, BBA, AAAB vì AAAB bị đưa xuống cuối. Bốn cạnh hoà ở trọng số 2; cặp ABB, BBB được duyệt đầu tiên. Lưu ý: trong video, vòng này gộp BBB với BBA. Đó cũng là một lựa chọn hoà hợp lệ và cuối cùng vẫn ra AAABBBA; ở đây ta theo đúng thứ tự duyệt của code.
 :::
 
-## Vòng 1: gộp AAA với AAB {.smaller}
+## B · Vòng 3/4: gộp AAAB + ABBB {.smaller}
 
 :::: {.columns}
-::: {.column width="50%"}
-Năm mục trên cùng của heap. Khoá = (overlap, i, j). Hàng cam là mục được pop.
+::: {.column width="55%"}
+```{=html}
+<svg class="ht-graph" viewBox="-42 64 725 320" width="100%" style="max-height:384px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g6-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g6-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g6-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g6-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M427.0,303.3 Q261.4,247.6 101.8,150.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g6-g)"/><path d="M487.9,297.1 Q506.6,212.6 557.0,151.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g6-g)"/><path d="M130.0,148.8 Q283.4,200.4 443.0,297.9" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g6-g)"/><path d="M572.1,150.9 Q553.4,235.4 503.0,296.9" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g6-b)"/><path d="M130.2,119.2 Q320.0,100.0 508.8,119.1" fill="none" stroke="#B8460F" stroke-width="5" marker-end="url(#g6-o)"/><g><circle cx="262.9" cy="237.1" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="262.9" y="237.1" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="514.5" cy="218.4" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="514.5" y="218.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="285.0" cy="211.9" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="285.0" y="211.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="319.8" cy="109.6" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="319.8" y="109.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="545.5" cy="229.6" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="545.5" y="229.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text><rect x="-2.4" y="104.0" width="129.6" height="44.0" rx="9" fill="#1F5FBF" stroke="#1F5FBF" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="white">AAAB</text><rect x="512.8" y="104.0" width="129.6" height="44.0" rx="9" fill="#1F5FBF" stroke="#1F5FBF" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="white">ABBB</text></svg>
+```
 
-| Khoá | Cặp |
-|:-:|:--|
-| [(2,0,1)]{.hl} | [AAA → AAB]{.hl} |
-| (2,1,2) | AAB → ABB |
-| (2,2,3) | ABB → BBB |
-| (2,2,4) | ABB → BBA |
-| (2,3,4) | BBB → BBA |
+Danh sách: [`BBA`, `AAAB`, `ABBB`]
 :::
-::: {.column width="50%"}
-**Pop** (2,0,1): hợp lệ, cả hai ô còn sống. Gộp:
+::: {.column width="45%"}
+**Ứng viên:** 2 cạnh hoà ở trọng số 2 (theo thứ tự duyệt)
 
-[AAA + AAB → AAAB]{.pick}
+<span class="ht-chip on">AAAB → ABBB</span> <span class="ht-chip">ABBB → BBA</span>
 
-Danh sách ô: `[AAAB, –, ABB, BBB, BBA]`. Ô 1 đã dùng, phiên bản ô 0 = 1.
+::: {.fragment}
+**Chọn** [AAAB → ABBB]{.hl}. Cặp được duyệt **đầu tiên** trong danh sách hiện tại.
 
-Tính lại ô 0 với ô 2, 3, 4 (hai chiều, 6 lần overlap) và push 6 mục. Các mục chính: AAAB → ABB = 2, AAAB → BBB = 1, AAAB → BBA = 1, BBA → AAAB = 1.
+<span class="ht-aln"><span class="row">AA<span class="ov">AB</span></span><span class="row">&nbsp;&nbsp;<span class="ov">AB</span>BB</span><span class="row res">AAABBB</span></span>
+:::
 
-Tiết kiệm 2 ký tự.
+::: {.fragment}
+Danh sách mới: [`BBA`, `AAABBB`]
+
+Tổng độ dài: 11 → [9]{.good} (tiết kiệm 2, cộng dồn 6)
+:::
 :::
 ::::
 
 ::: {.notes}
-Mục trên đỉnh là (2, 0, 1): AAA sang AAB. Cả hai ô còn sống, phiên bản đều là 0 nên hợp lệ. Gộp vào ô 0, ô 1 bị đánh dấu đã dùng. Mục (2, 1, 2), AAB sang ABB, từ giờ là mục cũ vì ô 1 đã dùng, nhưng vẫn nằm trong heap. Sau đó chỉ tính lại sáu cặp liên quan ô 0, hai cặp trong số đó có overlap 0 nên cũng được đẩy vào heap.
+Còn ba chuỗi: BBA, AAAB, ABBB. Hai cạnh hoà ở trọng số 2: AAAB sang ABBB và ABBB sang BBA. Cặp AAAB, ABBB được duyệt trước nên được chọn, ra AAABBB.
 :::
 
-## Vòng 2: gộp AAAB với ABB {.smaller}
+## B · Vòng 4/4: gộp AAABBB + BBA {.smaller}
 
 :::: {.columns}
-::: {.column width="50%"}
-Các mục trên cùng của heap. Hàng cam là mục được pop.
+::: {.column width="55%"}
+```{=html}
+<svg class="ht-graph" viewBox="-67 64 642 320" width="100%" style="max-height:384px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g7-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g7-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g7-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g7-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M427.0,303.3 Q261.4,247.6 101.8,150.1" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g7-g)"/><path d="M130.6,149.0 Q283.4,200.4 443.0,297.9" fill="none" stroke="#B8460F" stroke-width="5" marker-end="url(#g7-o)"/><g><circle cx="262.9" cy="237.1" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="262.9" y="237.1" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><g><circle cx="285.1" cy="211.9" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="285.1" y="211.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text><rect x="-26.8" y="104.0" width="178.4" height="44.0" rx="9" fill="#1F5FBF" stroke="#1F5FBF" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="white">AAABBB</text></svg>
+```
 
-| Khoá | Cặp |
-|:-:|:--|
-| [(2,0,2)]{.hl} | [AAAB → ABB]{.hl} |
-| (2,1,2) | AAB → ABB (cũ, ô 1 đã dùng) |
-| (2,2,3) | ABB → BBB |
-| (2,2,4) | ABB → BBA |
-| (2,3,4) | BBB → BBA |
+Danh sách: [`BBA`, `AAABBB`]
 :::
-::: {.column width="50%"}
-**Pop** (2,0,2). ABB → BBB cũng có overlap 2, nhưng khoá (2, 2, 3) đứng sau (2, 0, 2) vì **i = 0 nhỏ hơn**. Ô 0 luôn thắng khi hoà.
+::: {.column width="45%"}
+**Ứng viên:** cạnh nặng nhất, trọng số 2
 
-[AAAB + ABB → AAABB]{.pick}
+<span class="ht-chip on">AAABBB → BBA</span>
 
-Danh sách ô: `[AAABB, –, –, BBB, BBA]`. Phiên bản ô 0 = 2.
+::: {.fragment}
+**Chọn** [AAABBB → BBA]{.hl}. Chỉ có một cạnh nặng nhất.
 
-Tính lại ô 0 với ô 3, 4 (4 lần overlap), push 4 mục: AAABB → BBB = 2, AAABB → BBA = 2, BBA → AAABB = 1, BBB → AAABB = 0.
+<span class="ht-aln"><span class="row">AAAB<span class="ov">BB</span></span><span class="row">&nbsp;&nbsp;&nbsp;&nbsp;<span class="ov">BB</span>A</span><span class="row res">AAABBBA</span></span>
+:::
 
-Tiết kiệm thêm 2 (tổng 4).
+::: {.fragment}
+Danh sách mới: [`AAABBBA`]
+
+Tổng độ dài: 9 → [7]{.good} (tiết kiệm 2, cộng dồn 8)
+:::
 :::
 ::::
 
 ::: {.notes}
-Chuỗi mới AAAB nằm ở ô 0 nên có chỉ số nhỏ nhất, vì vậy mỗi cặp có ô 0 sẽ thắng các cặp hoà khác. Đó là lý do heap chọn AAAB sang ABB trước ABB sang BBB. Lưu ý cặp (2, 1, 2) vẫn còn trong heap, nhưng nó nằm sau cặp được chọn nên chưa bị pop ra.
+Chỉ còn hai đỉnh, cạnh AAABBB sang BBA có trọng số 2. Gộp được AAABBBA. Danh sách còn một chuỗi, không còn cặp nào, vòng lặp dừng.
 :::
 
-## Vòng 3: gộp AAABB với BBB {.smaller}
+## B · Kết quả: `AAABBBA` (7 ký tự) {.smaller}
 
 :::: {.columns}
-::: {.column width="50%"}
-Ba mục hợp lệ cùng overlap 2. Hàng cam là mục được pop.
+::: {.column width="34%"}
+Mỗi chuỗi đầu vào nằm liền trong kết quả:
 
-| Khoá | Cặp |
-|:-:|:--|
-| [(2,0,3)]{.hl} | [AAABB → BBB]{.hl} |
-| (2,0,4) | AAABB → BBA |
-| (2,3,4) | BBB → BBA |
-
-Khoá so ô i trước, rồi ô j, nên (0, 3) đứng trước (0, 4) và (3, 4).
+<span class="ht-aln"><span class="row top">AAABBBA</span><span class="row">AAA</span><span class="row">AAB</span><span class="row">ABB</span><span class="row">BBB</span><span class="row">BBA</span></span>
 :::
-::: {.column width="50%"}
-**Pop** (2,0,3), chỗ rẽ nhánh:
+::: {.column width="66%"}
+Mỗi vòng tiết kiệm 2, tổng 8: 15 − 8 = **7**.
 
-[AAABB + BBB → AAABBB]{.pick}
+| Vòng | Gộp | Kết quả | Tổng độ dài |
+|:-:|:--|:--|:-:|
+| 0 | – | – | 15 |
+| 1 | AAA + AAB | **AAAB** | 13 |
+| 2 | ABB + BBB | **ABBB** | 11 |
+| 3 | AAAB + ABBB | **AAABBB** | 9 |
+| 4 | AAABBB + BBA | **AAABBBA** | 7 |
 
-Danh sách ô: `[AAABBB, –, –, –, BBA]`. Phiên bản ô 0 = 3.
-
-Tính lại ô 0 với ô 4 (2 lần overlap), push 2 mục: AAABBB → BBA = 2, BBA → AAABBB = 1.
-
-Tiết kiệm thêm 2 (tổng 6).
-
-Nếu BBA nằm ở ô 3 và BBB ở ô 4, heap sẽ chọn cặp khác. Xem slide so sánh.
+Chỉ cần **4 vòng** (n − 1), mỗi vòng xét các cặp còn lại.
 :::
 ::::
 
 ::: {.notes}
-Đây là chỗ rẽ nhánh quan trọng nhất, cùng chỗ rẽ với cách quét toàn bộ. Ba cặp cùng overlap 2 và cả ba đều hợp lệ về mặt thuật toán. Heap so ô i trước rồi ô j, nên AAABB với BBB (ô 0 và ô 3) thắng AAABB với BBA (ô 0 và ô 4). May mắn là lựa chọn này dẫn đến kết quả tối ưu. Nếu thứ tự ô khác thì có thể không.
+Xếp các chuỗi đầu vào dưới kết quả để thấy mỗi chuỗi đều nằm liền trong AAABBBA. Greedy cần 4 vòng; tổng số cặp phải tính overlap là 20 + 12 + 6 + 2 = 40, so với 120 thứ tự nhân 4 overlap mỗi thứ tự = 480 của cách vét cạn. Câu hỏi tiếp theo: 7 ký tự này có phải tối ưu không, và greedy có luôn tối ưu không?
 :::
 
-## Vòng 4: bỏ mục cũ rồi gộp {.smaller}
+## C · Một đường đi, hai cách tìm {.smaller}
+
+<span class="ht-step">Phần C · So sánh Hamilton và greedy</span>
 
 :::: {.columns}
 ::: {.column width="50%"}
-Hai mục cùng khoá (2,0,4), khác phiên bản ô 0:
+**Hamilton (vét cạn):** xét **cả đường đi** cùng lúc, thử 120 thứ tự.
 
-| Phiên bản ô 0 | Cặp | Xử lý |
-|:-:|:--|:--|
-| 2 | AAABB → BBA | cũ, [bỏ]{.hl} |
-| [3]{.hl} | [AAABBB → BBA]{.hl} | [pop]{.hl} |
+```{=html}
+<svg class="ht-graph" viewBox="-30 -48 700 432" width="100%" style="max-height:264px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g8-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g8-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g8-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g8-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M97.5,102.3 Q180.8,46.2 263.5,27.1" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g8-o)"/><path d="M375.5,26.8 Q459.2,46.2 541.7,101.8" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g8-o)"/><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g8-o)"/><path d="M213.2,313.1 Q320.0,296.0 425.9,312.9" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g8-o)"/><g><circle cx="180.7" cy="55.4" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="180.7" y="55.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="458.9" cy="55.2" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="458.9" y="55.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="377.6" cy="236.9" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="319.8" cy="304.5" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="319.8" y="304.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><rect x="9.8" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAA</text><rect x="267.4" y="-8.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="15.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAB</text><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text></svg>
+```
 
-Bản cũ được đẩy ở vòng 2. Từ vòng 3, ô 0 đã lên phiên bản 3, nên bản cũ hết đúng.
+Tổng trọng số 8 → [7 ký tự]{.good}, luôn tối ưu.
 :::
 ::: {.column width="50%"}
-[AAABBB + BBA → AAABBBA]{.pick}
+**Greedy:** chốt **từng cạnh** nặng nhất, số trên cạnh = vòng chốt.
 
-Chỉ còn một chuỗi sống, nên dừng.
+```{=html}
+<svg class="ht-graph" viewBox="-30 -48 700 432" width="100%" style="max-height:264px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g9-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g9-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g9-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g9-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M97.5,102.3 Q180.8,46.2 263.5,27.1" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g9-o)"/><path d="M375.5,26.8 Q459.2,46.2 541.7,101.8" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g9-o)"/><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g9-o)"/><path d="M213.2,313.1 Q320.0,296.0 425.9,312.9" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g9-o)"/><g><circle cx="180.7" cy="55.4" r="15" fill="#B8460F"/><text x="180.7" y="55.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">①</text></g><g><circle cx="458.9" cy="55.2" r="15" fill="#B8460F"/><text x="458.9" y="55.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">③</text></g><g><circle cx="377.6" cy="236.9" r="15" fill="#B8460F"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">②</text></g><g><circle cx="319.8" cy="304.5" r="15" fill="#B8460F"/><text x="319.8" y="304.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">④</text></g><rect x="9.8" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAA</text><rect x="267.4" y="-8.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="15.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAB</text><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text></svg>
+```
 
-Tiết kiệm 2 + 2 + 2 + 2 = 8.
-
-15 − 8 = **7 ký tự**, bằng đáp án tối ưu (brute-force).
+Cũng ra [7 ký tự]{.good}.
 :::
 ::::
 
+<div class="ht-box">Greedy chốt đúng 4 cạnh của đường đi tối ưu, chỉ khác <b>thứ tự chốt</b>. Đây là may mắn, không được đảm bảo.</div>
+
 ::: {.notes}
-Đây là lần duy nhất trong ví dụ mà một mục cũ bị pop ra và bỏ. Hai mục có cùng overlap 2, cùng ô 0 và ô 4, chỉ khác phiên bản của ô 0. Mục cũ chứa chuỗi AAABB đã không còn tồn tại, nên phải bỏ. Nếu không kiểm tra phiên bản, code sẽ ghép nhầm theo thông tin cũ. Kết quả cuối AAABBBA dài 7.
+So sánh trên cùng đồ thị. Bên trái là đường đi Hamilton nặng nhất tìm bằng vét cạn. Bên phải là các cạnh greedy chốt, đánh số theo vòng. Mỗi lần gộp hai chuỗi tương ứng với việc chốt một cạnh nối đuôi chuỗi trước với đầu chuỗi sau: vòng 1 chốt AAA sang AAB, vòng 2 chốt ABB sang BBB, vòng 3 nối AAAB với ABBB tức chốt cạnh AAB sang ABB, vòng 4 chốt BBB sang BBA. Bốn cạnh này đúng là đường đi tối ưu. Hai slide tiếp theo cho thấy điều này không phải lúc nào cũng xảy ra.
 :::
 
-## Đồ thị co lại qua bốn vòng {.smaller}
+## C · Đổi thứ tự đầu vào → 9 ký tự {.smaller}
+
+Cùng 5 chuỗi, chỉ đổi chỗ BBA và BBB: <span class="ht-str">AAA</span> <span class="ht-str">AAB</span> <span class="ht-str">ABB</span> <span class="ht-str">BBA</span> <span class="ht-str">BBB</span>
 
 :::: {.columns}
-::: {.column width="50%"}
-**Trước vòng 1** · 5 đỉnh
-
-```{dot}
-//| fig-width: 4.4
-//| fig-height: 1.4
-digraph {
-  rankdir=LR; bgcolor="transparent"; nodesep=0.25; ranksep=0.35;
-  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
-  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
-  AAA -> AAB [color="#B8460F", penwidth=4];
-  AAB -> ABB; ABB -> BBB; ABB -> BBA; BBB -> BBA;
-}
+::: {.column width="55%"}
+```{=html}
+<svg class="ht-graph" viewBox="-30 -48 700 432" width="100%" style="max-height:300px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g10-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g10-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g10-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g10-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M539.0,149.6 Q378.6,247.6 214.0,303.0" fill="none" stroke="#C9D0DA" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#g10-f)"/><path d="M213.2,313.1 Q320.0,296.0 425.9,312.9" fill="none" stroke="#C9D0DA" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#g10-f)"/><path d="M97.5,102.3 Q180.8,46.2 263.5,27.1" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g10-o)"/><path d="M375.5,26.8 Q459.2,46.2 541.7,101.8" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g10-o)"/><path d="M572.1,150.9 Q553.4,235.4 503.0,296.9" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g10-o)"/><g><circle cx="180.7" cy="55.4" r="15" fill="#B8460F"/><text x="180.7" y="55.4" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">①</text></g><g><circle cx="458.9" cy="55.2" r="15" fill="#B8460F"/><text x="458.9" y="55.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">③</text></g><g><circle cx="377.6" cy="236.9" r="13" fill="white" stroke="#C9D0DA" stroke-width="1"/><text x="377.6" y="236.9" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#9AA4B1">2</text></g><g><circle cx="545.5" cy="229.6" r="15" fill="#B8460F"/><text x="545.5" y="229.6" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">②</text></g><g><circle cx="319.8" cy="304.5" r="13" fill="white" stroke="#C9D0DA" stroke-width="1"/><text x="319.8" y="304.5" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#9AA4B1">2</text></g><rect x="9.8" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="62.4" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAA</text><rect x="267.4" y="-8.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="15.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">AAB</text><rect x="525.0" y="104.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="577.6" y="127.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABB</text><rect x="105.0" y="300.0" width="105.2" height="44.0" rx="9" fill="white" stroke="#9AA4B1" stroke-width="1.6" stroke-dasharray="5 4"/><text x="157.6" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#9AA4B1">BBB</text><rect x="429.8" y="300.0" width="105.2" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="482.4" y="323.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BBA</text></svg>
 ```
 :::
-::: {.column width="50%"}
-**Trước vòng 2** · 4 đỉnh
+::: {.column width="45%"}
+<ol><li>AAA + AAB → <b>AAAB</b></li><li>ABB + BBA → <b>ABBA</b></li><li>AAAB + ABBA → <b>AAABBA</b></li></ol>
 
-```{dot}
-//| fig-width: 4.4
-//| fig-height: 1.4
-digraph {
-  rankdir=LR; bgcolor="transparent"; nodesep=0.25; ranksep=0.35;
-  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
-  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
-  AAAB [fillcolor="#1F5FBF", color="#1F5FBF", fontcolor="white"];
-  AAAB -> ABB [color="#B8460F", penwidth=4];
-  ABB -> BBB; ABB -> BBA; BBB -> BBA;
-}
-```
+::: {.fragment}
+Còn lại [`BBB`, `AAABBA`]: **không còn cặp nào có overlap ≥ 1** → nối thẳng:
+
+<span class="ht-aln">BBBAAABBA</span> [9 ký tự]{.hl}
+
+<div class="ht-box warn">Vòng 2 hoà, chọn ABB → BBA nên <b>BBB bị cô lập</b>. Nét đứt: cạnh tối ưu bị bỏ lỡ.</div>
+:::
 :::
 ::::
-
-:::: {.columns}
-::: {.column width="50%"}
-**Trước vòng 3** · 3 đỉnh
-
-```{dot}
-//| fig-width: 4.4
-//| fig-height: 1.4
-digraph {
-  rankdir=LR; bgcolor="transparent"; nodesep=0.25; ranksep=0.35;
-  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
-  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
-  AAABB [fillcolor="#1F5FBF", color="#1F5FBF", fontcolor="white"];
-  AAABB -> BBB [color="#B8460F", penwidth=4];
-  AAABB -> BBA; BBB -> BBA;
-}
-```
-:::
-::: {.column width="50%"}
-**Trước vòng 4** · 2 đỉnh
-
-```{dot}
-//| fig-width: 4.4
-//| fig-height: 1.4
-digraph {
-  rankdir=LR; bgcolor="transparent"; nodesep=0.5; ranksep=0.6;
-  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
-  edge [color="#1F5FBF", penwidth=2, arrowsize=0.7];
-  AAABBB [fillcolor="#1F5FBF", color="#1F5FBF", fontcolor="white"];
-  AAABBB -> BBA [color="#B8460F", penwidth=4];
-}
-```
-:::
-::::
-
-Chỉ vẽ cạnh trọng số 2: [cạnh cam]{.hl} là cạnh heap chọn, ô xanh là chuỗi đã gộp. Số cạnh trọng số 2: 5, 4, 3, rồi 1.
 
 ::: {.notes}
-Cùng một trace nhưng nhìn bằng đồ thị. Mỗi vòng, heap chọn cạnh nặng nhất theo khoá (nét cam), gộp hai đỉnh thành một đỉnh mới (ô xanh), rồi chỉ tính lại các cạnh quanh đỉnh mới. Ở vòng 3, có ba cạnh cùng trọng số 2, và khoá chọn cạnh AAABB sang BBB. Nhờ đó BBB không bị bỏ lại, và vòng 4 vẫn nối được BBA bằng overlap.
+Chạy lại đúng code greedy_scs nhưng đổi thứ tự đầu vào thành AAA, AAB, ABB, BBA, BBB. Ở vòng 2 có hoà, và lần này cặp ABB, BBA được duyệt trước nên được chọn. Sau đó BBB không còn chồng lấp với ai: AAABBA không kết thúc bằng B, còn BBB không bắt đầu bằng A. Code nối thẳng các chuỗi còn lại, ra BBBAAABBA dài 9. Video cũng minh hoạ đúng tình huống này, kết quả AAABBABBB, cũng dài 9. Vậy kết quả greedy phụ thuộc cách phá thế hoà.
 :::
 
-## Cùng đầu vào, hai cách xử lý hoà {.smaller}
+## C · Greedy sai cả khi không hoà {.smaller}
+
+Ví dụ khác: <span class="ht-str">ABCD</span> <span class="ht-str">CDBC</span> <span class="ht-str">BCDA</span>
 
 :::: {.columns}
-::: {.column width="50%"}
-**Vòng 3: AAABB + BBA** (nếu hoà chọn cặp này)
+::: {.column width="33%"}
+**Đồ thị chồng lấp**
 
-BBB bị bỏ lại, không còn overlap, phải ghép thẳng ở vòng 4.
+```{=html}
+<svg class="ht-graph" viewBox="-20 2 680 270" width="100%" style="max-height:276px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g11-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g11-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g11-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g11-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M487.4,217.5 Q320.0,236.0 153.6,217.6" fill="none" stroke="#A9B4C2" stroke-width="1.5" marker-end="url(#g11-g)"/><path d="M111.1,186.0 Q188.7,115.1 259.3,87.8" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g11-b)"/><path d="M152.6,202.5 Q320.0,184.0 486.4,202.4" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g11-b)"/><path d="M379.8,87.5 Q451.3,115.1 528.2,185.3" fill="none" stroke="#1F5FBF" stroke-width="2.4" marker-end="url(#g11-b)"/><g><circle cx="187.0" cy="126.0" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="187.0" y="126.0" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="319.8" cy="193.2" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="319.8" y="193.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">3</text></g><g><circle cx="452.6" cy="125.7" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="452.6" y="125.7" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="320.2" cy="226.8" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="320.2" y="226.8" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><rect x="20.0" y="188.0" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="84.8" y="211.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABCD</text><rect x="255.2" y="42.4" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="65.4" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">CDBC</text><rect x="490.4" y="188.0" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="555.2" y="211.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BCDA</text></svg>
+```
 
-`AAABBABBB`
-
-[9]{.big .hl} ký tự, chưa tối ưu
+Cạnh nặng nhất duy nhất: ABCD → BCDA = **3**.
 :::
-::: {.column width="50%"}
-**Vòng 3: AAABB + BBB** (heap chọn theo ô)
+::: {.column width="33%"}
+::: {.fragment}
+**Greedy** chọn cạnh 3 trước
 
-Vòng 4: AAABBB + BBA (overlap 2). Mọi chuỗi đều được nối bằng overlap.
+```{=html}
+<svg class="ht-graph" viewBox="-20 2 680 270" width="100%" style="max-height:276px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g12-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g12-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g12-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g12-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M152.6,202.5 Q320.0,184.0 486.4,202.4" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g12-o)"/><g><circle cx="319.8" cy="193.2" r="15" fill="#B8460F"/><text x="319.8" y="193.2" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="white">①</text></g><rect x="20.0" y="188.0" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="84.8" y="211.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABCD</text><rect x="255.2" y="42.4" width="129.6" height="44.0" rx="9" fill="white" stroke="#9AA4B1" stroke-width="1.6" stroke-dasharray="5 4"/><text x="320.0" y="65.4" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#9AA4B1">CDBC</text><rect x="490.4" y="188.0" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="555.2" y="211.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BCDA</text></svg>
+```
 
-`AAABBBA`
+<span class="ht-aln">CDBCABCDA</span> [9 ký tự]{.hl}
+:::
+:::
+::: {.column width="34%"}
+::: {.fragment}
+**Hamilton tối ưu:** 2 + 2 = 4
 
-[7]{.big .good} ký tự, tối ưu (brute-force 120 hoán vị)
+```{=html}
+<svg class="ht-graph" viewBox="-20 2 680 270" width="100%" style="max-height:276px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị overlap"><defs><marker id="g13-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="g13-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8460F"/></marker><marker id="g13-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker><marker id="g13-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C9D0DA"/></marker></defs><path d="M111.1,186.0 Q188.7,115.1 259.3,87.8" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g13-o)"/><path d="M379.8,87.5 Q451.3,115.1 528.2,185.3" fill="none" stroke="#B8460F" stroke-width="4" marker-end="url(#g13-o)"/><g><circle cx="187.0" cy="126.0" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="187.0" y="126.0" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><g><circle cx="452.6" cy="125.7" r="13" fill="white" stroke="#B8460F" stroke-width="1"/><text x="452.6" y="125.7" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#B8460F">2</text></g><rect x="20.0" y="188.0" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="84.8" y="211.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABCD</text><rect x="255.2" y="42.4" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="320.0" y="65.4" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">CDBC</text><rect x="490.4" y="188.0" width="129.6" height="44.0" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="555.2" y="211.0" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BCDA</text></svg>
+```
+
+<span class="ht-aln">ABCDBCDA</span> [8 ký tự]{.good}
+:::
 :::
 ::::
 
-**Kết luận:** greedy là heuristic. Kết quả phụ thuộc cách phá thế hoà, mà ở heap thì đó là thứ tự ô trong danh sách.
+<div class="ht-box warn">Lấy cạnh 3 "tham" trước đã chặn mất hai cạnh 2. Tổng 3 &lt; 2 + 2 = 4, nên greedy dài hơn tối ưu 1 ký tự.</div>
 
 ::: {.notes}
-Slide chốt của phần trace. Cả hai nhánh đều là greedy hợp lệ vì mỗi vòng đều chọn cặp có overlap lớn nhất. Khác biệt duy nhất là chọn cặp nào trong ba cặp hoà ở vòng 3. Một nhánh ra 9, nhánh kia ra 7, và 7 được brute-force xác nhận là tối ưu. Trong code của nhóm, nhánh 7 là nhánh được chọn. Khi test ngẫu nhiên trên 2000 bộ chuỗi nhỏ, kết quả của cách làm này bằng greedy quét toàn bộ ở 1964 bộ, ngắn hơn ở 21 bộ, dài hơn ở 15 bộ.
+Ví dụ này lấy từ chính notebook của Langmead. Không có hoà: cạnh ABCD sang BCDA trọng số 3 là nặng nhất duy nhất, greedy chọn nó. Sau khi gộp thành ABCDA, CDBC không còn chồng lấp với ABCDA theo chiều nào, nên phải nối thẳng: CDBCABCDA, 9 ký tự. Trong khi đó đường đi ABCD, CDBC, BCDA dùng hai cạnh trọng số 2, tổng 4, cho ABCDBCDA dài 8. Đây là bản chất của greedy: lựa chọn tốt nhất trước mắt có thể chặn lựa chọn tốt hơn về sau.
 :::
 
-## Hai đường đi trên đồ thị {.smaller}
+## C · Tổng kết: Hamilton vs greedy {.smaller}
 
-:::: {.columns}
-::: {.column width="50%"}
-**Nếu hoà chọn AAABB + BBA**
-
-```{dot}
-//| fig-width: 4.4
-//| fig-height: 1.5
-digraph {
-  rankdir=LR; bgcolor="transparent"; nodesep=0.3; ranksep=0.4;
-  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
-  edge [color="#B8460F", penwidth=3, arrowsize=0.7];
-  BBB [style="rounded,dashed", fillcolor="transparent", color="#7C8794"];
-  AAA -> AAB; AAB -> ABB; ABB -> BBA;
-  ABB -> BBB [style=dashed, color="#7C8794", penwidth=1.5];
-  BBB -> BBA [style=dashed, color="#7C8794", penwidth=1.5];
-}
-```
-:::
-::: {.column width="50%"}
-**Heap chọn AAABB + BBB**
-
-```{dot}
-//| fig-width: 4.4
-//| fig-height: 1.5
-digraph {
-  rankdir=LR; bgcolor="transparent"; nodesep=0.3; ranksep=0.4;
-  node [shape=box, style="rounded,filled", fillcolor="#E4E9F3", color="#9FB0D3", fontname="monospace", fontsize=16, fontcolor="#1B2430", penwidth=1.5];
-  edge [color="#1F5FBF", penwidth=3, arrowsize=0.7];
-  AAA -> AAB; AAB -> ABB; ABB -> BBB; BBB -> BBA;
-  ABB -> BBA [style=dashed, color="#7C8794", penwidth=1.5];
-}
-```
-:::
-::::
-
-| | Chọn BBA ở vòng 3 | Heap chọn BBB ở vòng 3 |
+| | Hamilton (vét cạn) | Greedy |
 |:--|:--|:--|
-| Đường đi | AAA → AAB → ABB → BBA, rồi ghép thẳng BBB | AAA → AAB → ABB → BBB → BBA |
-| Tổng trọng số | 2 + 2 + 2 = 6 | 2 + 2 + 2 + 2 = 8 |
-| Độ dài | 15 − 6 = [9]{.hl} | 15 − 8 = [7]{.good} |
-
-Nét liền: cạnh được dùng. Nét đứt: cạnh bị bỏ.
-
-::: {.notes}
-Cùng đồ thị, hai đường đi khác nhau. Nhánh trái bỏ BBB lại và phải ghép thẳng: tổng trọng số 6, độ dài 9. Nhánh phải là đường đi tối ưu AAA, AAB, ABB, BBB, BBA, dùng bốn cạnh trọng số 2, tổng 8, độ dài 7. Với ví dụ này, heap cho đúng đường đi Hamilton tối ưu. Nhưng đó là do thứ tự ô, không phải do thuật toán đảm bảo. Tìm đường đi Hamilton tốt nhất là bài toán NP-khó, nên greedy chỉ là heuristic.
-:::
-
-## Điều rút ra từ trace {.smaller}
-
-- **Greedy + heap vẫn là heuristic:** mỗi bước chọn cạnh lớn nhất trước mắt. Ở ví dụ này nó cho đúng 7 ký tự, nhưng kết quả phụ thuộc thứ tự ô khi hoà.
-- **Hamilton tối ưu là NP-khó:** greedy đổi lấy tốc độ, chấp nhận có khi không tối ưu.
-- **Số lần tính overlap:** heap tính 20 cặp ban đầu, rồi 6, 4, 2, 0 sau mỗi vòng, tổng [32]{.good}. Cách quét lại toàn bộ cần 40.
-- **Công thức:** n(n − 1) + (n − 1)(n − 2) = 2(n − 1)², cỡ n² lần tính overlap, so với cỡ n³ của cách quét lại. Đây là điểm nối sang phần độ phức tạp.
+| Ý tưởng | Thử **mọi thứ tự** | Gộp **cặp overlap lớn nhất** |
+| Số bước với n chuỗi | n! thứ tự | n − 1 vòng |
+| Lần tính overlap (n = 5) | 120 × 4 = **480** | 20 + 12 + 6 + 2 = **40** |
+| Ví dụ AAA … BBA | AAABBBA ([7]{.good}) | AAABBBA ([7]{.good}) |
+| Đổi thứ tự đầu vào | vẫn [7]{.good} | BBBAAABBA ([9]{.hl}) |
+| Ví dụ ABCD … | ABCDBCDA ([8]{.good}) | CDBCABCDA ([9]{.hl}) |
+| Đảm bảo tối ưu? | [Có]{.ht-ok} | [Không]{.ht-no} |
+| Dùng được khi n lớn? | [Không]{.ht-no} (NP-khó) | [Có]{.ht-ok} |
 
 ::: {.notes}
-Với n = 5, hiệu số còn nhỏ (32 so với 40), nhưng tăng nhanh theo n: khi n = 200, cách quét lại cần khoảng 2,67 triệu lần tính overlap, còn heap khoảng 79 nghìn lần. Lưu ý khi sang phần độ phức tạp: n² là số lần tính overlap, còn mỗi lần gọi còn tốn thời gian tỉ lệ với độ dài hai chuỗi, và chuỗi gộp có thể dài tới n·L. Heap thêm bộ nhớ O(n²) cho các mục.
+Bảng tóm tắt toàn bộ phần trace. Vét cạn đường đi Hamilton luôn cho đáp án đúng nhưng số thứ tự tăng theo giai thừa. Greedy chỉ cần n − 1 vòng nên dùng được cho dữ liệu lớn, nhưng là heuristic: có lúc trùng tối ưu như ví dụ AAA/BBB, có lúc tệ hơn do phá hoà khác đi, và có lúc tệ hơn ngay cả khi không có hoà như ví dụ ABCD. Phần độ phức tạp sẽ phân tích chi tiết hai con số 480 và 40.
 :::
