@@ -144,9 +144,9 @@ Cùng thông tin với bảng, nhưng dưới dạng đồ thị có hướng, c
 
 1. Tìm cặp (a, b) overlap **lớn nhất** (≥ k).
 2. Xoá a, b; **thêm chuỗi gộp vào cuối**.
-3. Hết cặp overlap ≥ k thì **nối thẳng** phần còn lại.
+3. Hết cặp overlap ≥ k: **nối thẳng**.
 
-Nếu **hoà**: giữ **cặp duyệt tới đầu tiên** (so sánh `>`).
+Nếu **hoà**: giữ **cặp được duyệt tới đầu tiên** (so sánh `>`).
 
 Ở ví dụ này k = 1.
 :::
@@ -398,7 +398,7 @@ Ví dụ này lấy từ chính notebook của Langmead. Không có hoà: cạnh
 **Điểm mạnh**
 
 - **Đơn giản:** mỗi vòng chỉ chọn cạnh nặng nhất.
-- **Ít bước:** tối đa n − 1 vòng. Số lần tính overlap: [40]{.good} (n = 5), [168]{.good} (n = 8).
+- **Ít bước:** tối đa n − 1 vòng. Số lần tính overlap: [(n³ − n)/3]{.good}. Ta được: [40]{.good} lần (n = 5) và [168]{.good} lần (n = 8).
 - **Dùng được khi n lớn:** thời gian đa thức, nên các trình lắp ráp đầu tiên dùng greedy.
 :::
 ::: {.column width="50%"}
@@ -406,7 +406,7 @@ Ví dụ này lấy từ chính notebook của Langmead. Không có hoà: cạnh
 
 - **Không đảm bảo tối ưu:** 9 so với 7 (AAA/BBB, có hoà), 9 so với 8 (ABCD).
 - **Phụ thuộc thứ tự đầu vào** và cách phá hoà.
-- **Chỉ nhìn trước mắt:** cạnh 3 chặn mất hai cạnh 2.
+- **Chỉ nhìn trước mắt:** cạnh 3 chặn mất hai cạnh 2 (ABCD).
 :::
 ::::
 
@@ -487,16 +487,16 @@ Cách chính xác: thử mọi thứ tự, tức mọi đường đi Hamilton, r
 ::: {.column width="50%"}
 **Điểm mạnh**
 
-- **Luôn tối ưu:** 7 (AAA…BBA), 8 (ABCD), 10 (ví dụ 8 chuỗi).
+- **Luôn tối ưu:** 7 (AAA/BBB), 8 (ABCD).
 - **Không phụ thuộc thứ tự đầu vào** và không cần luật phá hoà.
 - **Dễ chứng minh đúng:** thử hết rồi lấy ngắn nhất.
 :::
 ::: {.column width="50%"}
 **Điểm yếu**
 
-- **Bùng nổ giai thừa:** n = 5 là 120 thứ tự (480 lần tính overlap), n = 8 là 40.320 (282.240 lần), n = 20 là ≈ 2,4 × 10¹⁸.
+- **Bùng nổ giai thừa:** tính [n!]{.good} thứ tự. Với n = 5 là 120 thứ tự (480 lần tính overlap) và n = 8 là 40.320 (282.240 lần).
 - **NP-khó:** DP bitmask giảm còn 2ⁿ·n² nhưng vẫn là hàm mũ.
-- **Không dùng được** với dữ liệu thật (hàng triệu read).
+- **Không dùng được** với dữ liệu thật (kích cỡ rất lớn).
 :::
 ::::
 
@@ -539,14 +539,14 @@ So sánh trên cùng đồ thị. Bên trái là đường đi Hamilton nặng n
 
 ## D · So sánh theo cùng tiêu chí {.smaller}
 
-| Tiêu chí | Greedy (Langmead) | Hamilton (vét cạn) |
+| Tiêu chí | Greedy | Hamilton |
 |:--|:--|:--|
 | **Logic** | Gộp cặp overlap lớn nhất | Thử mọi thứ tự |
 | **Trace** (n = 5) | ≤ n − 1 vòng (4) | n! thứ tự (120) |
 | **Overlap** (n = 5) | **40** | 480 |
-| AAA … BBA | AAABBBA ([7]{.good}) | AAABBBA ([7]{.good}) |
+| AAA/BBB | AAABBBA ([7]{.good}) | AAABBBA ([7]{.good}) |
 | Đổi thứ tự đầu vào | BBBAAABBA ([9]{.hl}) | vẫn [7]{.good} |
-| ABCD … | CDBCABCDA ([9]{.hl}) | ABCDBCDA ([8]{.good}) |
+| ABCD | CDBCABCDA ([9]{.hl}) | ABCDBCDA ([8]{.good}) |
 | **Điểm mạnh** | Nhanh, đơn giản | Luôn tối ưu |
 | **Điểm yếu** | Có thể không tối ưu | n! (NP-khó) |
 | Dùng khi n lớn? | [Có]{.ht-ok} | [Không]{.ht-no} |
