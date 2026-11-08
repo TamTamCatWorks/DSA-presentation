@@ -1,3 +1,65 @@
-## Test 1
+---
+title: "Ý tưởng & Phát biểu Bài toán"
+format: revealjs
+---
 
-- Test Slide 1
+## 1. Giới thiệu Bài toán
+**Chuỗi siêu mẹ ngắn nhất (Shortest Superstring Problem - SSP)**
+
+- **Mô tả trực quan:** Tưởng tượng bạn có một cuốn sách bị băm nhỏ thành hàng ngàn đoạn văn bản ngắn. Nhiệm vụ của bạn là ghép các đoạn này lại để khôi phục cuốn sách gốc sao cho độ dài văn bản khôi phục là ngắn nhất (loại bỏ tối đa các phần trùng lặp).
+- **Tính thực tiễn:** Là bài toán nền tảng trong tin sinh học (Bioinformatics), đặc biệt trong việc lắp ráp hệ gen (DNA sequence assembly) từ các đoạn reads ngắn (tiền đề cho phần **06-application**).
+
+---
+
+## 2. Phát biểu Toán học
+**Định nghĩa chuẩn xác (Formal Definition)**
+
+- **Đầu vào (Input):** Một tập hợp S = {s1, s2, ..., sn} gồm n chuỗi (strings). Giả định không có chuỗi nào là chuỗi con (substring) của chuỗi khác.
+- **Đầu ra (Output):** Một chuỗi T (gọi là superstring) thỏa mãn:
+  1. Mọi chuỗi trong S đều là chuỗi con của T.
+  2. Độ dài của T là **nhỏ nhất** có thể.
+
+---
+
+## 3. Khái niệm Cốt lõi: Sự chồng lấp (Overlap)
+Để tạo ra chuỗi siêu mẹ ngắn nhất, ta cần tận dụng tối đa phần "đuôi" của chuỗi này trùng với phần "đầu" của chuỗi kia.
+
+- **Ký hiệu:** overlap(A, B) là độ dài chuỗi con dài nhất vừa là hậu tố (suffix) của A, vừa là tiền tố (prefix) của B.
+- **Ví dụ minh họa:**
+  - Chuỗi A = `ATGC`
+  - Chuỗi B = `GCAT`
+  - overlap(A, B) = 2 (vì `AT`**`GC`** và **`GC`**`AT` chia sẻ `GC`).
+- **Đặc điểm quan trọng:** Sự chồng lấp có tính **không đối xứng**: overlap(A, B) ≠ overlap(B, A). 
+
+*(Ghi chú: Khái niệm này sẽ được trace bằng tay chi tiết tại phần **02-hand-trace**).*
+
+---
+
+## 4. Đồ thị Chồng lấp (Overlap Graph)
+Bài toán xử lý chuỗi được mô hình hóa sang **Lý thuyết Đồ thị** để dễ giải quyết.
+
+- **Đỉnh (Vertices):** Mỗi chuỗi là một đỉnh.
+- **Cạnh có hướng (Directed Edges):** Có một cạnh nối từ đỉnh A đến đỉnh B nếu overlap(A, B) > 0.
+- **Trọng số (Weight):** Là giá trị overlap(A, B).
+- **Mục tiêu mới:** Tìm một đường đi qua tất cả các đỉnh sao cho tổng trọng số (tổng độ chồng lấp) là **lớn nhất**.
+
+*(Ghi chú: Đồ thị này sẽ được trực quan hóa tại phần **04-visualization**).*
+
+---
+
+## 5. Tại sao bài toán này lại khó?
+- Nếu chỉ có vài chuỗi, ta có thể thử mọi cách ghép (Vét cạn - Brute Force).
+- Tuy nhiên, SSP đã được chứng minh là bài toán **NP-khó (NP-Hard)**. Không tồn tại thuật toán thời gian đa thức để tìm ra kết quả tối ưu tuyệt đối.
+- Hệ quả: Lắp ráp 10,000 chuỗi DNA thực tế bằng Brute Force (độ phức tạp O(n!)) là bất khả thi.
+
+*(Ghi chú: Phân tích độ phức tạp chi tiết sẽ có ở phần **05-complexity**).*
+
+---
+
+## 6. Hướng giải quyết: Thuật toán Tham lam
+Vì không thể tìm kết quả hoàn hảo trong thời gian cho phép, cách tiếp cận khả thi nhất là **Tham lam (Greedy Heuristic)**:
+
+- **Chiến lược:** Ở mỗi bước, luôn chọn gộp 2 chuỗi có độ chồng lấp lớn nhất hiện có.
+- **Hiệu quả:** Thuật toán Greedy không đảm bảo tìm được chuỗi ngắn nhất tuyệt đối, nhưng độ phức tạp chỉ là O(n^3) với tốc độ tính toán cực nhanh, đáp ứng được nhu cầu thực tế.
+
+*(Ghi chú: Mã nguồn cài đặt chiến lược này sẽ được trình bày ở phần **03-python-impl**).*
