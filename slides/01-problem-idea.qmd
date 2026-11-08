@@ -1,3 +1,97 @@
-## Test 1
+# PHẦN 1: TỔNG QUAN VÀ CƠ SỞ TOÁN HỌC
 
-- Test Slide 1
+## 1.1 Khởi nguồn bài toán: Lắp ráp gen (DNA Assembly)
+
+::: {.columns}
+::: {.column width="50%"}
+**Vấn đề thực tế (Động lực học):**
+Trong tin sinh học (Bioinformatics), kỹ thuật giải trình tự *Shotgun Sequencing* không thể đọc toàn bộ bộ gen (DNA) cùng lúc. Máy giải trình tự cắt DNA thành hàng triệu đoạn ngắn (reads). 
+
+Nhiệm vụ của máy tính là ghép (assemble) các mảnh vụn này lại thành chuỗi DNA hoàn chỉnh ban đầu.
+:::
+::: {.column width="50%"}
+**Bài toán cốt lõi:**
+Tìm cách ghép nối các chuỗi con sao cho chúng chồng lấp (overlap) lên nhau nhiều nhất có thể, từ đó tạo ra một chuỗi tổng hợp có **độ dài ngắn nhất**, dựa trên giả định sinh học của nguyên lý *Occam's razor* (giải pháp đơn giản nhất / ngắn nhất thường là giải pháp đúng).
+:::
+:::
+
+::: {.notes}
+Speaker Notes: Nhấn mạnh vào yếu tố thực tế ở đây. Bài toán Shortest Superstring không sinh ra từ lý thuyết suông mà là lời giải cho một trong những vấn đề lớn nhất của sinh học hiện đại: Giải mã bản đồ gen người. Nếu không có thuật toán ghép chuỗi, chúng ta không thể xử lý hàng Terabyte dữ liệu từ các máy giải trình tự gen.
+:::
+
+---
+
+## 1.2 Phát biểu bài toán dạng Toán học (Formal Definition)
+
+Bài toán **Shortest Superstring Problem (SSP)** được định nghĩa chặt chẽ như sau:
+
+* **Input:** Một tập hợp $S = \{s_1, s_2, \dots, s_n\}$ gồm $n$ chuỗi (strings) trên một bảng chữ cái $\Sigma$ (ví dụ: $\Sigma = \{A, C, G, T\}$ trong DNA). Giả định không có chuỗi nào trong $S$ là chuỗi con của một chuỗi khác trong $S$.
+* **Output:** Một chuỗi $T$ có độ dài $|T|$ nhỏ nhất sao cho:
+  $$ \forall s_i \in S, s_i \text{ is a substring of } T $$
+
+::: {.fragment}
+> **Ví dụ:** $S = \{\text{CAT}, \text{ATT}, \text{TGC}, \text{TCA}\}$
+> * Chuỗi ghép thông thường (nối đuôi): $\text{CATATTGCTCA}$ (độ dài 11)
+> * Chuỗi Superstring ngắn nhất: $\text{TCATTGC}$ (độ dài 7)
+:::
+
+---
+
+## 1.3 Độ phức tạp tính toán: Tại sao lại là NP-Hard?
+
+Việc tìm kiếm chuỗi $T$ tối ưu toàn cục là một bài toán vô cùng tốn kém về tài nguyên.
+
+::: {.incremental}
+- **Không gian trạng thái (State Space):** Để tìm kết quả tối ưu, ta phải thử mọi hoán vị của $n$ chuỗi. Số lượng hoán vị là $O(n!)$.
+- **Giới hạn thực thi:** Với $n = 50$, $50! \approx 3 \times 10^{64}$. Ngay cả siêu máy tính nhanh nhất thế giới cũng mất hàng tỷ năm để giải bằng phương pháp vét cạn (Brute Force).
+- **Chứng minh độ phức tạp:** Bài toán SSP đã được chứng minh là thuộc lớp **NP-Hard** bằng cách quy giản (reduction) từ bài toán **Vertex Cover** hoặc **Asymmetric Traveling Salesperson Problem (ATSP)**.
+:::
+
+::: {.notes}
+Đoạn này giải thích lý do tồn tại của thuật toán Greedy. Chúng ta không dùng Greedy vì nó hoàn hảo, mà vì chúng ta không còn sự lựa chọn nào khác khi đối mặt với một bài toán NP-Hard trong thực tế dữ liệu lớn.
+:::
+
+---
+
+## 1.4 Quy giản sang Lý thuyết đồ thị (Overlap Graph)
+
+Thay vì thao tác trên mảng chuỗi trực tiếp, ta mô hình hóa bài toán dưới dạng **Đồ thị có hướng, có trọng số (Directed Weighted Graph)**:
+
+* **Đỉnh (Vertices):** Mỗi chuỗi $s_i \in S$ là một đỉnh $v_i$.
+* **Cạnh (Edges):** Có một cạnh có hướng từ $v_i$ đến $v_j$.
+* **Trọng số (Weight):** Trọng số $w(i, j)$ chính là độ dài chồng lấp lớn nhất (Overlap) giữa phần hậu tố (suffix) của $v_i$ và tiền tố (prefix) của $v_j$.
+
+**Mục tiêu mới:** Tìm một đường đi qua tất cả các đỉnh (Hamiltonian Path) sao cho tổng trọng số (tổng độ chồng lấp) là **lớn nhất** (tương đương với việc chiều dài chuỗi đích là nhỏ nhất).
+
+---
+
+## 1.5 Tư tưởng cốt lõi của thuật toán Greedy (Tham lam)
+
+Vì không thể giải chính xác NP-Hard trong thời gian đa thức (Polynomial time), thuật toán **Greedy Shortest Superstring** áp dụng chiến lược xấp xỉ (Approximation Strategy):
+
+::: {.columns}
+::: {.column width="60%"}
+**Các bước tư duy Heuristic:**
+1. Khảo sát toàn bộ đồ thị để tìm cạnh có trọng số lớn nhất (cặp chuỗi có overlap dài nhất).
+2. Xóa 2 đỉnh này và gộp chúng thành 1 đỉnh mới (Vertex Contraction).
+3. Tính toán lại trọng số (overlap) từ đỉnh mới này đến các đỉnh còn lại.
+4. Lặp lại quá trình cho đến khi đồ thị chỉ còn đúng 1 đỉnh.
+:::
+::: {.column width="40%"}
+**Đặc tính:**
+- Ưu tiên Tối ưu cục bộ (Local Optimum) ở từng bước.
+- Chạy nhanh, độ phức tạp $O(n^3)$ hoặc $O(n^2 \log n)$ nếu tối ưu.
+:::
+:::
+
+---
+
+## 1.6 Tỷ lệ xấp xỉ (Approximation Ratio) và Giới hạn
+
+Thuật toán Greedy không đảm bảo tìm được nghiệm ngắn nhất tuyệt đối, nhưng nó có biên độ sai số (Bound) được bảo đảm bằng toán học:
+
+- **Giới hạn thực tế:** Các nhà khoa học máy tính (Tarhio, Ukkonen, Blum) đã chứng minh thuật toán Greedy luôn trả về một chuỗi không bao giờ dài quá **2.5 lần** so với chiều dài của chuỗi tối ưu tuyệt đối.
+- **Conjecture (Giả thuyết 2-Opt):** Giả thuyết nổi tiếng trong khoa học máy tính tin rằng thuật toán này thực tế luôn đạt hệ số xấp xỉ là **2** (chuỗi tìm được dài tối đa gấp đôi chuỗi hoàn hảo), dù việc chứng minh toán học hoàn chỉnh cho con số 2 vẫn đang được nghiên cứu.
+
+**Trường hợp Greedy thất bại (Counter-example):**
+Khi có các chuỗi đánh lừa thuật toán gộp một overlap dài cục bộ nhưng phá vỡ cấu trúc chồng lấp của toàn bộ các chuỗi khác, dẫn đến kết quả dài hơn tối ưu. (Sẽ được minh họa bằng Code ở phần Test/Demo).
