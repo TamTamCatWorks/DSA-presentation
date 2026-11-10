@@ -1,97 +1,168 @@
-# PHẦN 1: TỔNG QUAN VÀ CƠ SỞ TOÁN HỌC
+## Bài toán: Shortest Common Superstring {.smaller}
 
-## 1.1 Khởi nguồn bài toán: Lắp ráp gen (DNA Assembly)
+```{=html}
+<style>
+.hl { color:#B8460F; font-weight:700; }
+.good { color:#1F5FBF; font-weight:700; }
+.ht-str { display:inline-block; font-family:"Courier New",monospace; font-weight:700; background:#E4E9F3; border:1.5px solid #9FB0D3; border-radius:8px; padding:2px 12px; margin:2px 3px; }
+.ht-aln { font-family:"Courier New",monospace; font-weight:700; font-size:1.15em; line-height:1.25; display:inline-block; background:#F6F7F9; border-radius:10px; padding:8px 20px; margin:4px 0; vertical-align:middle; }
+.ht-aln .row { display:block; white-space:pre; }
+.ht-aln .ov { background:#FBE3D3; color:#8F3508; border-radius:3px; }
+.ht-aln .res { border-top:2px solid #1B2430; margin-top:3px; padding-top:2px; color:#1F5FBF; }
+.ht-graph { display:block; margin:0 auto; }
+.ht-step { font-size:0.62em; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#B8460F; }
+.ht-box { background:#F6F7F9; border-left:4px solid #1F5FBF; border-radius:6px; padding:8px 14px; margin-top:8px; }
+.ht-box.warn { border-left-color:#B8460F; }
+.ht-ok { color:#1E7A3C; font-weight:700; } .ht-no { color:#B42318; font-weight:700; }
+</style>
+```
 
-::: {.columns}
+<span class="ht-step">Phần 1 · Giới thiệu bài toán</span>
+
+**Đầu vào:** tập gồm n chuỗi. Ví dụ: <span class="ht-str">ABC</span> <span class="ht-str">BCD</span> <span class="ht-str">CDE</span>
+
+**Đầu ra:** chuỗi [ngắn nhất]{.hl} chứa cả n chuỗi như **chuỗi con liền nhau**.
+
+:::: {.columns}
 ::: {.column width="50%"}
-**Vấn đề thực tế (Động lực học):**
-Trong tin sinh học (Bioinformatics), kỹ thuật giải trình tự *Shotgun Sequencing* không thể đọc toàn bộ bộ gen (DNA) cùng lúc. Máy giải trình tự cắt DNA thành hàng triệu đoạn ngắn (reads). 
+**Cách ngây thơ:** nối thẳng
 
-Nhiệm vụ của máy tính là ghép (assemble) các mảnh vụn này lại thành chuỗi DNA hoàn chỉnh ban đầu.
+<span class="ht-aln"><span style="color:#1F5FBF">ABC</span><span style="color:#B8460F">BCD</span><span style="color:#1E7A3C">CDE</span></span>
+
+[9 ký tự]{.hl}
 :::
 ::: {.column width="50%"}
-**Bài toán cốt lõi:**
-Tìm cách ghép nối các chuỗi con sao cho chúng chồng lấp (overlap) lên nhau nhiều nhất có thể, từ đó tạo ra một chuỗi tổng hợp có **độ dài ngắn nhất**, dựa trên giả định sinh học của nguyên lý *Occam's razor* (giải pháp đơn giản nhất / ngắn nhất thường là giải pháp đúng).
+::: {.fragment}
+**Cho chồng lên nhau:**
+
+<span class="ht-aln"><span class="row" style="color:#1F5FBF">ABC</span><span class="row" style="color:#B8460F">&nbsp;BCD</span><span class="row" style="color:#1E7A3C">&nbsp;&nbsp;CDE</span><span class="row res">ABCDE</span></span>
+
+[5 ký tự]{.good}
 :::
 :::
+::::
+
+<div class="ht-box">Giả định: không chuỗi nào nằm trọn trong chuỗi khác. Nếu có thì <b>loại trước</b>, vì chuỗi lớn đã chứa sẵn nó.</div>
 
 ::: {.notes}
-Speaker Notes: Nhấn mạnh vào yếu tố thực tế ở đây. Bài toán Shortest Superstring không sinh ra từ lý thuyết suông mà là lời giải cho một trong những vấn đề lớn nhất của sinh học hiện đại: Giải mã bản đồ gen người. Nếu không có thuật toán ghép chuỗi, chúng ta không thể xử lý hàng Terabyte dữ liệu từ các máy giải trình tự gen.
+Bài toán Shortest Common Superstring, viết tắt là SCS. Cho một tập chuỗi, ta cần tìm chuỗi ngắn nhất chứa mọi chuỗi trong tập như một chuỗi con liền nhau. Ví dụ với ABC, BCD, CDE: nếu nối thẳng thì được ABCBCDCDE dài 9 ký tự. Nhưng nếu cho đuôi chuỗi trước chồng lên đầu chuỗi sau thì chỉ cần ABCDE, dài 5 ký tự. Một giả định đi kèm: không chuỗi nào là chuỗi con của chuỗi khác, vì nếu có thì ta loại nó trước, chuỗi lớn đã chứa nó rồi. Bước loại này cũng chính là hàm remove_substrings trong code của nhóm.
 :::
 
----
+## Động lực: lắp ráp hệ gen {.smaller}
 
-## 1.2 Phát biểu bài toán dạng Toán học (Formal Definition)
+<span class="ht-step">Phần 1 · Vì sao bài toán này quan trọng?</span>
 
-Bài toán **Shortest Superstring Problem (SSP)** được định nghĩa chặt chẽ như sau:
+:::: {.columns}
+::: {.column width="50%"}
+Máy giải trình tự **không đọc được cả hệ gen** một lần. Nó chỉ đọc ra các đoạn ngắn (**read**), nằm ở vị trí ngẫu nhiên và **chồng lấp** lên nhau.
 
-* **Input:** Một tập hợp $S = \{s_1, s_2, \dots, s_n\}$ gồm $n$ chuỗi (strings) trên một bảng chữ cái $\Sigma$ (ví dụ: $\Sigma = \{A, C, G, T\}$ trong DNA). Giả định không có chuỗi nào trong $S$ là chuỗi con của một chuỗi khác trong $S$.
-* **Output:** Một chuỗi $T$ có độ dài $|T|$ nhỏ nhất sao cho:
-  $$ \forall s_i \in S, s_i \text{ is a substring of } T $$
+**Ta nhận được (thứ tự bị xáo trộn):**
+
+<span class="ht-str">TGCA</span> <span class="ht-str">ACGT</span> <span class="ht-str">GTTG</span>
 
 ::: {.fragment}
-> **Ví dụ:** $S = \{\text{CAT}, \text{ATT}, \text{TGC}, \text{TCA}\}$
-> * Chuỗi ghép thông thường (nối đuôi): $\text{CATATTGCTCA}$ (độ dài 11)
-> * Chuỗi Superstring ngắn nhất: $\text{TCATTGC}$ (độ dài 7)
+Hệ gen gốc chứa mọi read, nên nó là một **superstring** của các read. Chọn superstring ngắn nhất là giả thuyết đơn giản nhất giải thích được dữ liệu.
 :::
-
----
-
-## 1.3 Độ phức tạp tính toán: Tại sao lại là NP-Hard?
-
-Việc tìm kiếm chuỗi $T$ tối ưu toàn cục là một bài toán vô cùng tốn kém về tài nguyên.
-
-::: {.incremental}
-- **Không gian trạng thái (State Space):** Để tìm kết quả tối ưu, ta phải thử mọi hoán vị của $n$ chuỗi. Số lượng hoán vị là $O(n!)$.
-- **Giới hạn thực thi:** Với $n = 50$, $50! \approx 3 \times 10^{64}$. Ngay cả siêu máy tính nhanh nhất thế giới cũng mất hàng tỷ năm để giải bằng phương pháp vét cạn (Brute Force).
-- **Chứng minh độ phức tạp:** Bài toán SSP đã được chứng minh là thuộc lớp **NP-Hard** bằng cách quy giản (reduction) từ bài toán **Vertex Cover** hoặc **Asymmetric Traveling Salesperson Problem (ATSP)**.
 :::
+::: {.column width="50%"}
+::: {.fragment}
+**Khôi phục bằng cách chồng các read:**
+
+<span class="ht-aln"><span class="row" style="color:#1F5FBF">ACGT</span><span class="row" style="color:#B8460F">&nbsp;&nbsp;GTTG</span><span class="row" style="color:#1E7A3C">&nbsp;&nbsp;&nbsp;&nbsp;TGCA</span><span class="row res">ACGTTGCA</span></span>
+
+3 read dài 4 (tổng 12) → [8 ký tự]{.good}
+:::
+:::
+::::
+
+<div class="ht-box warn">Thực tế phức tạp hơn: có đoạn lặp và lỗi đọc. SCS là mô hình <b>đơn giản hoá</b>, nhưng là nền tảng của các thuật toán lắp ráp đầu tiên.</div>
 
 ::: {.notes}
-Đoạn này giải thích lý do tồn tại của thuật toán Greedy. Chúng ta không dùng Greedy vì nó hoàn hảo, mà vì chúng ta không còn sự lựa chọn nào khác khi đối mặt với một bài toán NP-Hard trong thực tế dữ liệu lớn.
+Ứng dụng quan trọng nhất của SCS là lắp ráp hệ gen. Máy giải trình tự chỉ đọc được các đoạn ngắn gọi là read, nằm ở vị trí ngẫu nhiên và chồng lấp lên nhau, nên ta nhận được chúng theo thứ tự xáo trộn. Ví dụ ba read TGCA, ACGT, GTTG. Chồng các read lại đúng chỗ thì được ACGTTGCA, dài 8 thay vì 12. Vì hệ gen gốc chứa mọi read, nó là một superstring của các read, và superstring ngắn nhất là cách giải thích đơn giản nhất. Tuy nhiên thực tế có đoạn lặp và lỗi đọc nên SCS chỉ là mô hình đơn giản hoá. Phần ứng dụng ở cuối bài sẽ quay lại chi tiết hơn.
 :::
 
----
+## Ý tưởng: tận dụng phần chồng lấp {.smaller}
 
-## 1.4 Quy giản sang Lý thuyết đồ thị (Overlap Graph)
+<span class="ht-step">Phần 1 · Ý tưởng cốt lõi</span>
 
-Thay vì thao tác trên mảng chuỗi trực tiếp, ta mô hình hóa bài toán dưới dạng **Đồ thị có hướng, có trọng số (Directed Weighted Graph)**:
+:::: {.columns}
+::: {.column width="52%"}
+`overlap(a, b)` = độ dài **hậu tố dài nhất của a** trùng với **tiền tố của b**.
 
-* **Đỉnh (Vertices):** Mỗi chuỗi $s_i \in S$ là một đỉnh $v_i$.
-* **Cạnh (Edges):** Có một cạnh có hướng từ $v_i$ đến $v_j$.
-* **Trọng số (Weight):** Trọng số $w(i, j)$ chính là độ dài chồng lấp lớn nhất (Overlap) giữa phần hậu tố (suffix) của $v_i$ và tiền tố (prefix) của $v_j$.
+**Ví dụ:** overlap(ABC, BCD) = [2]{.hl}, vì `BC` vừa là đuôi của ABC vừa là đầu của BCD.
 
-**Mục tiêu mới:** Tìm một đường đi qua tất cả các đỉnh (Hamiltonian Path) sao cho tổng trọng số (tổng độ chồng lấp) là **lớn nhất** (tương đương với việc chiều dài chuỗi đích là nhỏ nhất).
+<span class="ht-aln"><span class="row">A<span class="ov">BC</span></span><span class="row">&nbsp;<span class="ov">BC</span>D</span><span class="row res">ABCD</span></span>
 
----
-
-## 1.5 Tư tưởng cốt lõi của thuật toán Greedy (Tham lam)
-
-Vì không thể giải chính xác NP-Hard trong thời gian đa thức (Polynomial time), thuật toán **Greedy Shortest Superstring** áp dụng chiến lược xấp xỉ (Approximation Strategy):
-
-::: {.columns}
-::: {.column width="60%"}
-**Các bước tư duy Heuristic:**
-1. Khảo sát toàn bộ đồ thị để tìm cạnh có trọng số lớn nhất (cặp chuỗi có overlap dài nhất).
-2. Xóa 2 đỉnh này và gộp chúng thành 1 đỉnh mới (Vertex Contraction).
-3. Tính toán lại trọng số (overlap) từ đỉnh mới này đến các đỉnh còn lại.
-4. Lặp lại quá trình cho đến khi đồ thị chỉ còn đúng 1 đỉnh.
+Ghép a ngay trước b thì **tiết kiệm** được overlap(a, b) ký tự.
 :::
-::: {.column width="40%"}
-**Đặc tính:**
-- Ưu tiên Tối ưu cục bộ (Local Optimum) ở từng bước.
-- Chạy nhanh, độ phức tạp $O(n^3)$ hoặc $O(n^2 \log n)$ nếu tối ưu.
+::: {.column width="48%"}
+::: {.fragment}
+**Mục tiêu:** chọn **thứ tự** các chuỗi sao cho tổng phần tiết kiệm là [lớn nhất]{.good}.
+
+<div class="ht-box warn">overlap(a, b) ≠ overlap(b, a). Ví dụ overlap(BCD, ABC) = 0. Nên <b>thứ tự</b> mới là điều quan trọng.</div>
+
+Cách tính overlap từng bước sẽ trình bày ở phần trace.
 :::
 :::
+::::
 
----
+::: {.notes}
+Ý tưởng cốt lõi là tận dụng phần chồng lấp. Overlap của a và b là độ dài hậu tố dài nhất của a trùng với tiền tố của b. Ví dụ overlap của ABC và BCD là 2, vì BC vừa là đuôi của ABC vừa là đầu của BCD, ghép lại được ABCD thay vì ABCBCD. Mỗi lần ghép a ngay trước b, ta tiết kiệm được đúng overlap(a, b) ký tự. Overlap không đối xứng: overlap của BCD và ABC bằng 0. Vì vậy bài toán trở thành chọn thứ tự các chuỗi sao cho tổng phần tiết kiệm lớn nhất. Cách tính overlap chi tiết nằm ở phần trace.
+:::
 
-## 1.6 Tỷ lệ xấp xỉ (Approximation Ratio) và Giới hạn
+## Mô hình hoá bằng đồ thị {.smaller}
 
-Thuật toán Greedy không đảm bảo tìm được nghiệm ngắn nhất tuyệt đối, nhưng nó có biên độ sai số (Bound) được bảo đảm bằng toán học:
+<span class="ht-step">Phần 1 · Từ chuỗi sang đồ thị</span>
 
-- **Giới hạn thực tế:** Các nhà khoa học máy tính (Tarhio, Ukkonen, Blum) đã chứng minh thuật toán Greedy luôn trả về một chuỗi không bao giờ dài quá **2.5 lần** so với chiều dài của chuỗi tối ưu tuyệt đối.
-- **Conjecture (Giả thuyết 2-Opt):** Giả thuyết nổi tiếng trong khoa học máy tính tin rằng thuật toán này thực tế luôn đạt hệ số xấp xỉ là **2** (chuỗi tìm được dài tối đa gấp đôi chuỗi hoàn hảo), dù việc chứng minh toán học hoàn chỉnh cho con số 2 vẫn đang được nghiên cứu.
+:::: {.columns}
+::: {.column width="58%"}
+```{=html}
+<svg class="ht-graph" viewBox="0 0 640 250" width="100%" style="max-height:280px" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Đồ thị chồng lấp của ABC, BCD, CDE"><defs><marker id="p4-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F5FBF"/></marker><marker id="p4-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A9B4C2"/></marker></defs><path d="M75,108 Q320,230 565,108" fill="none" stroke="#A9B4C2" stroke-width="1.8" marker-end="url(#p4-g)"/><path d="M132,82 L260,82" fill="none" stroke="#1F5FBF" stroke-width="3" marker-end="url(#p4-b)"/><path d="M377,82 L505,82" fill="none" stroke="#1F5FBF" stroke-width="3" marker-end="url(#p4-b)"/><g><circle cx="196" cy="82" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="196" y="82" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="441" cy="82" r="13" fill="white" stroke="#1F5FBF" stroke-width="1"/><text x="441" y="82" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#1F5FBF">2</text></g><g><circle cx="320" cy="169" r="13" fill="white" stroke="#D5DBE3" stroke-width="1"/><text x="320" y="169" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#7C8794">1</text></g><rect x="20" y="60" width="112" height="44" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="76" y="83" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">ABC</text><rect x="265" y="60" width="112" height="44" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="321" y="83" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">BCD</text><rect x="510" y="60" width="112" height="44" rx="9" fill="#E4E9F3" stroke="#9FB0D3" stroke-width="1.6"/><text x="566" y="83" text-anchor="middle" dominant-baseline="central" font-family="Courier New, monospace" font-weight="700" font-size="22" fill="#1B2430">CDE</text></svg>
+```
 
-**Trường hợp Greedy thất bại (Counter-example):**
-Khi có các chuỗi đánh lừa thuật toán gộp một overlap dài cục bộ nhưng phá vỡ cấu trúc chồng lấp của toàn bộ các chuỗi khác, dẫn đến kết quả dài hơn tối ưu. (Sẽ được minh họa bằng Code ở phần Test/Demo).
+Đường đi [ABC → BCD → CDE]{.good}: tổng trọng số 2 + 2 = 4.
+:::
+::: {.column width="42%"}
+- **Đỉnh:** mỗi chuỗi
+- **Cạnh a → b:** trọng số `overlap(a, b)`, chỉ vẽ cạnh > 0
+- **Thứ tự ghép** = đường đi qua mọi đỉnh đúng một lần (**đường đi Hamilton**)
+
+<div class="ht-box"><b>Độ dài</b> = tổng độ dài các chuỗi − tổng trọng số đường đi.<br>Ví dụ: 9 − 4 = <span class="good">5</span>.</div>
+:::
+::::
+
+<div class="ht-box warn">Superstring ngắn nhất ⇔ <b>đường đi Hamilton nặng nhất</b>.</div>
+
+::: {.notes}
+Đây là bước chuyển từ bài toán chuỗi sang bài toán đồ thị. Mỗi chuỗi là một đỉnh. Cạnh từ a sang b có trọng số là overlap(a, b), ta chỉ vẽ các cạnh có trọng số lớn hơn 0. Ở ví dụ ABC, BCD, CDE có ba cạnh: ABC sang BCD trọng số 2, BCD sang CDE trọng số 2, và ABC sang CDE trọng số 1 vì chung ký tự C. Một thứ tự ghép chính là một đường đi qua mọi đỉnh đúng một lần, gọi là đường đi Hamilton. Độ dài superstring bằng tổng độ dài các chuỗi trừ tổng trọng số của đường đi: 9 trừ 4 bằng 5. Vì vậy, tìm superstring ngắn nhất tương đương với tìm đường đi Hamilton có tổng trọng số lớn nhất.
+:::
+
+## Thách thức và hai hướng giải {.smaller}
+
+<span class="ht-step">Phần 1 · Câu hỏi đặt ra</span>
+
+Tìm đường đi Hamilton nặng nhất là bài toán [NP-khó]{.hl}: số thứ tự ghép là **n!**.
+
+:::: {.columns}
+::: {.column width="50%"}
+**n = 5:** 120 thứ tự
+
+**n = 10:** hơn 3,6 triệu thứ tự
+
+**n = 20:** khoảng 2,4 × 10¹⁸ thứ tự
+:::
+::: {.column width="50%"}
+::: {.fragment}
+Hai hướng sẽ so sánh theo cùng tiêu chí:
+
+1. **Greedy:** chốt dần cạnh nặng nhất. [Nhanh]{.good}, nhưng có thể không tối ưu.
+2. **Đường đi Hamilton (vét cạn):** thử mọi thứ tự. [Luôn tối ưu]{.good}, nhưng bùng nổ giai thừa.
+:::
+:::
+::::
+
+<div class="ht-box">Phần tiếp theo: <b>trace bằng tay</b> cả hai cách trên cùng một ví dụ.</div>
+
+::: {.notes}
+Tìm đường đi Hamilton nặng nhất là bài toán NP-khó. Số thứ tự ghép là n giai thừa: với 5 chuỗi là 120, với 10 chuỗi là hơn 3,6 triệu, và với 20 chuỗi đã là khoảng 2,4 nhân 10 mũ 18. Vì vậy có hai hướng. Greedy chốt dần cạnh nặng nhất nên rất nhanh nhưng không đảm bảo tối ưu. Đường đi Hamilton vét cạn thử mọi thứ tự nên luôn tối ưu nhưng thời gian bùng nổ. Phần tiếp theo sẽ trace bằng tay cả hai cách trên cùng một ví dụ để thấy rõ sự đánh đổi này.
+:::
