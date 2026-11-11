@@ -1,5 +1,6 @@
 ---
-title: "Lowest Common Ancestor (LCA)"
+title: "Shortest Common Substring"
+subtitle: "and Applications in Genome Assembly"
 author: "Team 8"
 format: revealjs
 bibliography: references.bib
