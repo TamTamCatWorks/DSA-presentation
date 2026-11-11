@@ -17,13 +17,15 @@
 #vzf3538274 button,#vzf3538274 select{font-size:18px;padding:4px 10px;border:1px solid #c9d3de;border-radius:6px;background:#fff;cursor:pointer}
 #vzf3538274 input[type=range]{flex:1}
 #vzf3538274 .vz-pp{min-width:64px;background:#d6e9ff}
+#vzf3538274 .vz-no{position:relative}
+#vzf3538274 .vz-ln.bp .vz-no::before{content:"";position:absolute;left:2px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:#e53935}
 </style>
 <div class="vz-main"><div class="vz-code"></div>
 <div class="vz-right"><svg viewBox="0 0 640 300"></svg><div class="vz-vars"></div></div></div>
 <div class="vz-bar">
 <button data-a="first" title="First (Home)">⏮</button><button data-a="prev" title="Back (←)">◀</button>
 <button data-a="pp" class="vz-pp" title="Play / pause (Space)">▶ Play</button>
-<button data-a="next" title="Step (→)">▶|</button><button data-a="last" title="Last (End)">⏭</button>
+<button data-a="next" title="Step (→)">▶|</button><button data-a="last" title="Last (End)">⏭</button><button data-a="pbp" title="Previous merge (Shift+M)">◀ Merge</button><button data-a="nbp" title="Next merge (M)">Merge ▶</button>
 <input type="range" min="0" value="0"><span class="vz-n"></span>
 <select title="Speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="10">10×</option></select>
 </div>
@@ -37,45 +39,64 @@ function hl(t){const ci=t.indexOf("#");let c="";if(ci>=0){c='<span class="c">'+e
  return t.split(/(\"[^\"]*\"|'[^']*'|\b\w+\b)/).map(p=>/^["']/.test(p)?'<span class="s">'+esc(p)+"</span>":KW.test(p)?'<span class="k">'+p+"</span>":/^\d+$/.test(p)?'<span class="m">'+p+"</span>":esc(p)).join("")+c;}
 code.innerHTML=D.lines.map(l=>`<div class="vz-ln" data-n="${l.n}"><span class="vz-no">${l.n}</span><span class="vz-ar"></span>${hl(l.t)}</div>`).join("");
 const rows={};code.querySelectorAll(".vz-ln").forEach(e=>rows[e.dataset.n]=e);
+const BP=[129,134];BP.forEach(n=>rows[n]&&rows[n].classList.add("bp"));
+const isBp=k=>BP.includes(D.steps[k].l);
+function nextBp(){for(let k=i+1;k<D.steps.length;k++)if(isBp(k))return k;return D.steps.length-1;}
+function prevBp(){for(let k=i-1;k>=0;k--)if(isBp(k))return k;return 0;}
 const ov=(a,b)=>{for(let k=Math.min(a.length,b.length);k>0;k--)if(a.slice(-k)===b.slice(0,k))return k;return 0;};
 const num=x=>typeof x==="number"?x:null;
-function drawStrings(v){
+function drawStrings(v,X){X=X||{};
  const V=D.view;let arr=v[V.var];if(!Array.isArray(arr)){svg.innerHTML="";return;}
- const live=V.live&&num(v[V.live])!=null?v[V.live]:arr.length;
+ const live=X.n!=null?X.n:(V.live&&num(v[V.live])!=null?v[V.live]:arr.length);
  const n=live,cx=320,cy=150,R=Math.min(115,40+n*14),pos=[];
  for(let i=0;i<n;i++){const a=-Math.PI/2+2*Math.PI*i/Math.max(n,1);pos.push([cx+R*1.35*Math.cos(a),cy+R*Math.sin(a)]);}
- const best=(V.hl||[]).map(k=>num(v[k])).filter(x=>x!=null), cmp=(V.cmp||[]).map(k=>num(v[k])).filter(x=>x!=null);
- const w=i=>12*String(arr[i]).length+22;let s='<defs><marker id="'+root.id+'a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9db7d1"/></marker></defs>';
- if(n<=14)for(let i=0;i<n;i++)for(let j=0;j<n;j++){if(i===j)continue;const o=ov(String(arr[i]),String(arr[j]));if(!o)continue;
+ const best=X.hl||(V.hl||[]).map(k=>num(v[k])).filter(x=>x!=null), cmp=X.cmp||(V.cmp||[]).map(k=>num(v[k])).filter(x=>x!=null), M=X.mk;
+ const w=i=>12*String(arr[i]).length+22;let s='<defs><marker id="'+root.id+'a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9db7d1"/></marker><marker id="'+root.id+'g" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2f9e44"/></marker></defs>';let top="";
+ if(n<=14)for(let i=0;i<n;i++)for(let j=0;j<n;j++){if(i===j)continue;const o=ov(String(arr[i]),String(arr[j]));if(!o)continue;if(M&&M.noedge&&(i===M.keep&&j===M.cons||i===M.cons&&j===M.keep))continue;
   const[x1,y1]=pos[i],[x2,y2]=pos[j],dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,nx=-dy/L*9,ny=dx/L*9;
-  const on=best.includes(i)&&best.includes(j)&&best.indexOf(i)<best.indexOf(j);
+  const on=best.includes(i)&&best.includes(j)&&best.indexOf(i)<best.indexOf(j),mg=!!M&&!M.noedge&&i===M.from&&j===M.to;
   const sx=x1+dx*.2+nx,sy=y1+dy*.2+ny,ex=x1+dx*.8+nx,ey=y1+dy*.8+ny;
-  s+=`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${on?"#e07b00":"#9db7d1"}" stroke-width="${on?3.5:1.6}" marker-end="url(#${root.id}a)"/><text x="${(sx+ex)/2+nx*.6}" y="${(sy+ey)/2+ny*.6+4}" font-size="12" text-anchor="middle" fill="${on?"#e07b00":"#7b8794"}" font-weight="700">${o}</text>`;}
- for(let i=0;i<n;i++){const[x,y]=pos[i],W=w(i),isb=best.includes(i),isc=cmp.includes(i);
-  s+=`<rect x="${x-W/2}" y="${y-16}" width="${W}" height="32" rx="9" fill="${isb?"#ffe3b8":isc?"#d9f2d9":"#d6e9ff"}" stroke="${isb?"#e07b00":isc?"#4caf50":"#5b9bd5"}" stroke-width="1.5"/><text x="${x}" y="${y+6}" text-anchor="middle" font-size="16" font-family="Menlo,Consolas,monospace">${esc(String(arr[i]))}</text><text x="${x-W/2+3}" y="${y-19}" font-size="11" fill="#9aa5b1">[${i}]</text>`;}
+  const ed=`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${mg?"#2f9e44":on?"#e07b00":"#9db7d1"}" stroke-width="${mg||on?3.5:1.6}" marker-end="url(#${root.id}${mg?"g":"a"})"/>${mg?`<rect x="${(sx+ex)/2+nx*.6-10}" y="${(sy+ey)/2+ny*.6-9}" width="20" height="18" rx="4" fill="#fff" stroke="#2f9e44"/>`:""}<text x="${(sx+ex)/2+nx*.6}" y="${(sy+ey)/2+ny*.6+4}" font-size="12" text-anchor="middle" fill="${mg?"#2f9e44":on?"#e07b00":"#7b8794"}" font-weight="700">${o}</text>`;if(mg)top+=ed;else s+=ed;}
+ s+=top;for(let i=0;i<n;i++){const[x,y]=pos[i],W=w(i),isb=best.includes(i),isc=cmp.includes(i);let fl=isb?"#ffe3b8":isc?"#d9f2d9":"#d6e9ff",sk=isb?"#e07b00":isc?"#4caf50":"#5b9bd5",sw=1.5,da="";
+  if(M&&(i===M.keep||i===M.cons)){const kp=i===M.keep;fl=kp?"#c9f2d3":"#ffd9d9";if(!M.noedge){sk="#2f9e44";sw=3.5;}if(!kp)da=' stroke-dasharray="6 4"';}
+  s+=`<rect x="${x-W/2}" y="${y-16}" width="${W}" height="32" rx="9" fill="${fl}" stroke="${sk}" stroke-width="${sw}"${da}/><text x="${x}" y="${y+6}" text-anchor="middle" font-size="16" font-family="Menlo,Consolas,monospace">${esc(String(arr[i]))}</text><text x="${x-W/2+3}" y="${y-19}" font-size="11" fill="#9aa5b1">[${i}]</text>`;}
  svg.innerHTML=s;}
 function drawBars(v){
  const V=D.view;let a=v[V.var];if(!Array.isArray(a)){svg.innerHTML="";return;}
  const mx=Math.max(1,...a.map(Math.abs)),W=600/a.length,cmp=(V.cmp||[]).concat(V.hl||[]).map(k=>num(v[k]));let s="";
  a.forEach((x,i)=>{const h=Math.abs(x)/mx*240,on=cmp.includes(i);s+=`<rect x="${20+i*W+2}" y="${270-h}" width="${W-4}" height="${h}" fill="${on?"#ffb35c":"#8ab8e6"}"/><text x="${20+i*W+W/2}" y="288" text-anchor="middle" font-size="12">${x}</text>`;});
  svg.innerHTML=s;}
+// ---- merge illustration (greedy) ----
+function mdir(p){const a=String(p.arr[p.idx_i]),b=String(p.arr[p.idx_j]),m=p.merge,o1=ov(a,b),o2=ov(b,a);
+ if(o1>0&&a+b.slice(o1)===m)return[p.idx_i,p.idx_j];if(o2>0&&b+a.slice(o2)===m)return[p.idx_j,p.idx_i];return[p.idx_i,p.idx_j];}
+function gplan(st,g){
+ const L=st.l,k=g.idx_i,c=g.idx_j,has=!!g.merge,X={hl:k!==c?[k,c]:[]};
+ if(L===113)X.hl=[];
+ if(L===113||L===114||L===115)X.cmp=[];
+ if(L===125){X.n=g.num+1;X.cmp=[];if(!has)X.hl=[];}
+ else if(L===127){X.n=g.num+1;X.cmp=[];X.hl=[];if(has){const f=mdir(st.v);X.mk={keep:k,cons:c,from:f[0],to:f[1]};}}
+ else if(L===129){X.n=g.num+1;X.cmp=[];X.hl=[];const f=mdir(st.v);X.mk={keep:k,cons:c,from:f[0],to:f[1]};}
+ else if(L===130){X.cmp=[];X.hl=[];}
+ else if(L===134){X.n=g.num+1;X.cmp=[];X.hl=[];X.mk={keep:0,cons:g.num,noedge:true};}
+ return X;}
 let i=0,timer=null,prev={};
 function show(k){
  i=Math.max(0,Math.min(D.steps.length-1,k));const st=D.steps[i];
  if(rows.cur)rows.cur.classList.remove("cur"),rows.cur.querySelector(".vz-ar").textContent="";
  const r=rows[st.l];if(r){r.classList.add("cur");r.querySelector(".vz-ar").textContent="▶";rows.cur=r;
   const t=r.offsetTop-code.clientHeight/2;code.scrollTop=Math.max(0,t);}
- const pv=i?D.steps[i-1].v:{};
- vars.innerHTML=Object.entries(st.v).filter(([k])=>!(D.hide||[]).includes(k)).map(([k,x])=>{const t=JSON.stringify(x),ch=JSON.stringify(pv[k])!==t;return `<div class="${ch&&i?"chg":""}"><b>${esc(k)}</b> = ${esc(t)}</div>`;}).join("");
- if(D.view.kind==="strings")drawStrings(st.v);else if(D.view.kind==="bars")drawBars(st.v);else svg.innerHTML="";
+ const gv=D.steps[Math.min(i+1,D.steps.length-1)].v,pv=i?st.v:{};
+ vars.innerHTML=Object.entries(gv).filter(([k])=>!(D.hide||[]).includes(k)).map(([k,x])=>{const t=JSON.stringify(x),ch=JSON.stringify(pv[k])!==t;return `<div class="${ch&&i?"chg":""}"><b>${esc(k)}</b> = ${esc(t)}</div>`;}).join("");
+ if(D.view.kind==="strings")drawStrings(gv,gplan(st,gv));else if(D.view.kind==="bars")drawBars(gv);else svg.innerHTML="";
  rng.value=i;cnt.textContent=(i+1)+" / "+D.steps.length;}
 function stop(){clearInterval(timer);timer=null;pp.textContent="▶ Play";}
 function play(){if(i>=D.steps.length-1)show(0);pp.textContent="⏸ Pause";timer=setInterval(()=>{if(i>=D.steps.length-1)stop();else show(i+1);},700/spd.value);}
 const toggle=()=>timer?stop():play();
+{const lh=parseFloat(getComputedStyle(vars).lineHeight)||19.6,n=Math.max(...D.steps.map(s=>Object.keys(s.v).filter(k=>!(D.hide||[]).includes(k)).length));vars.style.height=Math.ceil(n*lh+2)+"px";}
 rng.max=D.steps.length-1;rng.oninput=()=>{stop();show(+rng.value);};
 spd.onchange=()=>{if(timer){stop();play();}};
-root.querySelectorAll("button").forEach(b=>b.onclick=()=>{const a=b.dataset.a;if(a==="pp")return toggle();stop();show(a==="first"?0:a==="last"?1e9:i+(a==="next"?1:-1));root.focus();});
-root.addEventListener("keydown",e=>{const m={" ":toggle,ArrowRight:()=>{stop();show(i+1)},ArrowLeft:()=>{stop();show(i-1)},Home:()=>{stop();show(0)},End:()=>{stop();show(1e9)}}[e.key];
+root.querySelectorAll("button").forEach(b=>b.onclick=()=>{const a=b.dataset.a;if(a==="pp")return toggle();stop();show(a==="first"?0:a==="last"?1e9:a==="nbp"?nextBp():a==="pbp"?prevBp():i+(a==="next"?1:-1));root.focus();});
+root.addEventListener("keydown",e=>{const m={" ":toggle,ArrowRight:()=>{stop();show(i+1)},ArrowLeft:()=>{stop();show(i-1)},Home:()=>{stop();show(0)},End:()=>{stop();show(1e9)},m:()=>{stop();show(nextBp())},M:()=>{stop();show(prevBp())}}[e.key];
  if(m){m();e.preventDefault();e.stopPropagation();}},true);
 root.addEventListener("click",()=>root.focus());
 if(window.Reveal&&Reveal.on)Reveal.on("slidechanged",stop);

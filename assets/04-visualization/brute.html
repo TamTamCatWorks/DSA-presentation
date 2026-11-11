@@ -18,13 +18,15 @@
 #vze6bb93cb button,#vze6bb93cb select{font-size:18px;padding:4px 10px;border:1px solid #c9d3de;border-radius:6px;background:#fff;cursor:pointer}
 #vze6bb93cb input[type=range]{flex:1}
 #vze6bb93cb .vz-pp{min-width:64px;background:#d6e9ff}
+#vze6bb93cb .vz-no{position:relative}
+#vze6bb93cb .vz-ln.bp .vz-no::before{content:"";position:absolute;left:2px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:#e53935}
 </style>
 <div class="vz-main"><div class="vz-code"></div>
 <div class="vz-right"><svg viewBox="0 0 640 300"></svg><div class="vz-vars"></div></div></div>
 <div class="vz-bar">
 <button data-a="first" title="First (Home)">⏮</button><button data-a="prev" title="Back (←)">◀</button>
 <button data-a="pp" class="vz-pp" title="Play / pause (Space)">▶ Play</button>
-<button data-a="next" title="Step (→)">▶|</button><button data-a="last" title="Last (End)">⏭</button>
+<button data-a="next" title="Step (→)">▶|</button><button data-a="last" title="Last (End)">⏭</button><button data-a="pbp" title="Previous merge (Shift+M)">◀ Merge</button><button data-a="nbp" title="Next merge (M)">Merge ▶</button>
 <input type="range" min="0" value="0"><span class="vz-n"></span>
 <select title="Speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="10">10×</option></select>
 </div>
@@ -38,6 +40,10 @@ function hl(t){const ci=t.indexOf("#");let c="";if(ci>=0){c='<span class="c">'+e
  return t.split(/(\"[^\"]*\"|'[^']*'|\b\w+\b)/).map(p=>/^["']/.test(p)?'<span class="s">'+esc(p)+"</span>":KW.test(p)?'<span class="k">'+p+"</span>":/^\d+$/.test(p)?'<span class="m">'+p+"</span>":esc(p)).join("")+c;}
 code.innerHTML=D.lines.map(l=>`<div class="vz-ln" data-n="${l.n}"><span class="vz-no">${l.n}</span><span class="vz-ar"></span>${hl(l.t)}</div>`).join("");
 const rows={};code.querySelectorAll(".vz-ln").forEach(e=>rows[e.dataset.n]=e);
+const BP=[177];BP.forEach(n=>rows[n]&&rows[n].classList.add("bp"));
+const isBp=k=>BP.includes(D.steps[k].l);
+function nextBp(){for(let k=i+1;k<D.steps.length;k++)if(isBp(k))return k;return D.steps.length-1;}
+function prevBp(){for(let k=i-1;k>=0;k--)if(isBp(k))return k;return 0;}
 const ov=(a,b)=>{for(let k=Math.min(a.length,b.length);k>0;k--)if(a.slice(-k)===b.slice(0,k))return k;return 0;};
 const num=x=>typeof x==="number"?x:null;
 function drawStrings(v){
@@ -66,17 +72,18 @@ function show(k){
  if(rows.cur)rows.cur.classList.remove("cur"),rows.cur.querySelector(".vz-ar").textContent="";
  const r=rows[st.l];if(r){r.classList.add("cur");r.querySelector(".vz-ar").textContent="▶";rows.cur=r;
   const t=r.offsetTop-code.clientHeight/2;code.scrollTop=Math.max(0,t);}
- const pv=i?D.steps[i-1].v:{};
- vars.innerHTML=Object.entries(st.v).filter(([k])=>!(D.hide||[]).includes(k)).map(([k,x])=>{const t=JSON.stringify(x),ch=JSON.stringify(pv[k])!==t;return `<div class="${ch&&i?"chg":""}"><b>${esc(k)}</b> = ${esc(t)}</div>`;}).join("");
- if(D.view.kind==="strings")drawStrings(st.v);else if(D.view.kind==="bars")drawBars(st.v);else svg.innerHTML="";
+ const gv=D.steps[Math.min(i+1,D.steps.length-1)].v,pv=i?st.v:{};
+ vars.innerHTML=Object.entries(gv).filter(([k])=>!(D.hide||[]).includes(k)).map(([k,x])=>{const t=JSON.stringify(x),ch=JSON.stringify(pv[k])!==t;return `<div class="${ch&&i?"chg":""}"><b>${esc(k)}</b> = ${esc(t)}</div>`;}).join("");
+ if(D.view.kind==="strings")drawStrings(gv);else if(D.view.kind==="bars")drawBars(gv);else svg.innerHTML="";
  rng.value=i;cnt.textContent=(i+1)+" / "+D.steps.length;}
 function stop(){clearInterval(timer);timer=null;pp.textContent="▶ Play";}
 function play(){if(i>=D.steps.length-1)show(0);pp.textContent="⏸ Pause";timer=setInterval(()=>{if(i>=D.steps.length-1)stop();else show(i+1);},700/spd.value);}
 const toggle=()=>timer?stop():play();
+{const lh=parseFloat(getComputedStyle(vars).lineHeight)||19.6,n=Math.max(...D.steps.map(s=>Object.keys(s.v).filter(k=>!(D.hide||[]).includes(k)).length));vars.style.height=Math.ceil(n*lh+2)+"px";}
 rng.max=D.steps.length-1;rng.oninput=()=>{stop();show(+rng.value);};
 spd.onchange=()=>{if(timer){stop();play();}};
-root.querySelectorAll("button").forEach(b=>b.onclick=()=>{const a=b.dataset.a;if(a==="pp")return toggle();stop();show(a==="first"?0:a==="last"?1e9:i+(a==="next"?1:-1));root.focus();});
-root.addEventListener("keydown",e=>{const m={" ":toggle,ArrowRight:()=>{stop();show(i+1)},ArrowLeft:()=>{stop();show(i-1)},Home:()=>{stop();show(0)},End:()=>{stop();show(1e9)}}[e.key];
+root.querySelectorAll("button").forEach(b=>b.onclick=()=>{const a=b.dataset.a;if(a==="pp")return toggle();stop();show(a==="first"?0:a==="last"?1e9:a==="nbp"?nextBp():a==="pbp"?prevBp():i+(a==="next"?1:-1));root.focus();});
+root.addEventListener("keydown",e=>{const m={" ":toggle,ArrowRight:()=>{stop();show(i+1)},ArrowLeft:()=>{stop();show(i-1)},Home:()=>{stop();show(0)},End:()=>{stop();show(1e9)},m:()=>{stop();show(nextBp())},M:()=>{stop();show(prevBp())}}[e.key];
  if(m){m();e.preventDefault();e.stopPropagation();}},true);
 root.addEventListener("click",()=>root.focus());
 if(window.Reveal&&Reveal.on)Reveal.on("slidechanged",stop);
