@@ -1,6 +1,6 @@
 ---
 title: "Shortest Common Substring"
-subtitle: "and Applications in Genome Assembly"
+subtitle: "and Its Applications"
 author: "Team 8"
 format: revealjs
 bibliography: references.bib
