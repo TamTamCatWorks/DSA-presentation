@@ -1,6 +1,6 @@
 """bake_graph.py - bake the overlap graph of a whole FASTQ into ONE interactive graph-view widget.
 
-Every read is a dot; a line joins two reads whose ends overlap by >= --show-min letters. Greedy's
+Every read is a sequence-shaped rectangle; a line joins two reads whose ends overlap by >= --show-min letters. Greedy's
 picks light up in orange as you play, and edges that can no longer be used disappear. Force-directed
 layout (d3-force, inlined, works offline) with zoom, pan, drag and hover, in the spirit of Obsidian's
 graph view.
@@ -56,7 +56,7 @@ TEMPLATE = r"""
 #__ID__ .gr-cap{font-size:16px;line-height:1.35;margin-top:4px}
 #__ID__ .gr-leg{left:12px;bottom:12px;font-size:14px;color:#3e4c59;line-height:1.7}
 #__ID__ .gr-leg i{display:inline-block;width:26px;height:0;border-top:2px solid;vertical-align:middle;margin-right:8px}
-#__ID__ .gr-leg u{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin:0 12px 0 8px}
+#__ID__ .gr-leg u{display:inline-block;width:18px;height:8px;border-radius:3px;vertical-align:middle;margin:0 12px 0 8px}
 #__ID__ .gr-tip{position:absolute;display:none;pointer-events:none;background:#1b2a41;color:#fff;font-size:14px;line-height:1.4;padding:6px 10px;border-radius:6px;white-space:nowrap}
 #__ID__ .vz-bar{display:flex;gap:10px;align-items:center;margin-top:12px;font-size:16px}
 #__ID__ button,#__ID__ select{font-size:18px;padding:4px 10px;border:1px solid #c9d3de;border-radius:6px;background:#fff;cursor:pointer}
@@ -82,6 +82,7 @@ TEMPLATE = r"""
 (function(){
 const D=__DATA__, root=document.getElementById("__ID__"), $=s=>root.querySelector(s);
 const N=D.n,EI=D.ei,EJ=D.ej,EO=D.eo,EV=D.ev,M=EI.length,E=EV.length,W=1200,H=560;
+const reads=D.reads,lengths=D.lengths;
 const cv=$("canvas"),ctx=cv.getContext("2d"),tip=$(".gr-tip"),cap=$(".gr-cap"),rng=$("input"),cnt=$(".vz-n"),pp=$(".vz-pp"),spd=$("select");
 const dpr=Math.min(2,window.devicePixelRatio||1);cv.width=W*dpr;cv.height=H*dpr;
 const fmt=n=>n.toLocaleString("en-US");
@@ -110,7 +111,9 @@ reset();
 // ---- drawing
 let hover=-1,dirty=true,raf=0,drag=null,pan=null,playing=false;
 const sx=n=>n.x*K+TX,sy=n=>n.y*K+TY;
-const nodeR=()=>Math.max(2,Math.min(7,1.6+0.55*Math.sqrt(K)));
+const nodeWidth=i=>Math.max(8,Math.min(72,7+lengths[i]*0.16))*K;
+const nodeHeight=()=>Math.max(5,Math.min(18,7+2.2*Math.sqrt(K)));
+function roundedRect(x,y,w,h,r){const q=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+q,y);ctx.arcTo(x+w,y,x+w,y+h,q);ctx.arcTo(x+w,y+h,x,y+h,q);ctx.arcTo(x,y+h,x,y,q);ctx.arcTo(x,y,x+w,y,q);ctx.closePath();}
 function draw(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
  const dim=hover>=0;ctx.lineWidth=0.9;
@@ -119,26 +122,29 @@ function draw(){
  ctx.beginPath();for(let k=0;k<applied;k++){const e=EV[k],a=nodes[e[0]],b=nodes[e[1]];ctx.moveTo(sx(a),sy(a));ctx.lineTo(sx(b),sy(b));}
  ctx.lineWidth=2.2;ctx.strokeStyle="rgba(224,123,0,"+(dim?0.4:0.95)+")";ctx.stroke();
  const nb=new Set();if(hover>=0){nb.add(hover);for(const[j]of outL[hover])nb.add(j);for(const[j]of inL[hover])nb.add(j);}
- const r=nodeR();
  for(let i=0;i<N;i++){const n=nodes[i],rt=rootOf[i];ctx.globalAlpha=dim&&!nb.has(i)?0.3:1;
-  ctx.fillStyle=pcnt[rt]>1?"hsl("+(((rt*137.5)%360)|0)+",62%,50%)":"#5b9bd5";ctx.beginPath();ctx.arc(sx(n),sy(n),r,0,6.2832);ctx.fill();}
+  const w=nodeWidth(i),h=nodeHeight(),x=sx(n)-w/2,y=sy(n)-h/2;
+  ctx.fillStyle=pcnt[rt]>1?"hsl("+(((rt*137.5)%360)|0)+",62%,50%)":"#5b9bd5";
+  roundedRect(x,y,w,h,Math.min(4,h/2));ctx.fill();
+  if(K>2.2&&w>28){ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.fillStyle="rgba(255,255,255,.9)";ctx.font=Math.max(8,Math.min(12,h*.8))+"px ui-monospace,monospace";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(reads[i],sx(n),sy(n));ctx.restore();}
+ }
  ctx.globalAlpha=1;
- if(applied){const e=EV[applied-1];for(const i of [e[0],e[1]]){const n=nodes[i];ctx.beginPath();ctx.arc(sx(n),sy(n),r+4,0,6.2832);ctx.lineWidth=2.5;ctx.strokeStyle="#e07b00";ctx.stroke();}}
+ if(applied){const e=EV[applied-1];for(const i of [e[0],e[1]]){const n=nodes[i],w=nodeWidth(i),h=nodeHeight();roundedRect(sx(n)-w/2-3,sy(n)-h/2-3,w+6,h+6,Math.min(5,(h+6)/2));ctx.lineWidth=2.5;ctx.strokeStyle="#e07b00";ctx.stroke();}}
  if(hover>=0){const h=nodes[hover];ctx.lineWidth=2;ctx.strokeStyle="#1b2a41";ctx.fillStyle="#1b2a41";
   const inc=[...outL[hover],...inL[hover]].filter(t=>state[t[2]]!==0||true);
   ctx.beginPath();for(const t of inc){if(state[t[2]]===0)continue;const o=nodes[t[0]];ctx.moveTo(sx(h),sy(h));ctx.lineTo(sx(o),sy(o));}ctx.lineWidth=1.8;ctx.strokeStyle="rgba(27,42,65,.8)";ctx.stroke();
   if(K>1.2&&inc.length<=16){ctx.font="700 12px system-ui,sans-serif";ctx.textAlign="center";for(const t of inc){if(state[t[2]]===0)continue;const o=nodes[t[0]],mx=(sx(h)+sx(o))/2,my=(sy(h)+sy(o))/2;ctx.lineWidth=3;ctx.strokeStyle="#f8fafc";ctx.strokeText(t[1],mx,my-3);ctx.fillText(t[1],mx,my-3);}}
-  ctx.beginPath();ctx.arc(sx(h),sy(h),r+2.5,0,6.2832);ctx.lineWidth=2.5;ctx.strokeStyle="#1b2a41";ctx.stroke();}
+  const hw=nodeWidth(hover),hh=nodeHeight();roundedRect(sx(h)-hw/2-2,sy(h)-hh/2-2,hw+4,hh+4,Math.min(5,(hh+4)/2));ctx.lineWidth=2.5;ctx.strokeStyle="#1b2a41";ctx.stroke();}
 }
 function loop(){raf=0;let act=false;if(sim.alpha()>sim.alphaMin()){sim.tick();sim.tick();act=true;dirty=true;}
  if(dirty){draw();dirty=false;}if(act||playing||drag)raf=requestAnimationFrame(loop);}
 function kick(){dirty=true;if(!raf)raf=requestAnimationFrame(loop);}
 // ---- interaction
 const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];};
-function pick(mx,my){let b=-1,bd=(nodeR()+5)**2;for(let i=0;i<N;i++){const n=nodes[i],d=(sx(n)-mx)**2+(sy(n)-my)**2;if(d<bd){bd=d;b=i;}}return b;}
+function pick(mx,my){let b=-1,bd=Infinity;for(let i=0;i<N;i++){const n=nodes[i],dx=Math.max(Math.abs(sx(n)-mx)-nodeWidth(i)/2,0),dy=Math.max(Math.abs(sy(n)-my)-nodeHeight()/2,0),d=dx*dx+dy*dy;if(d<bd){bd=d;b=i;}}return bd<=64?b:-1;}
 function setTip(i,mx,my){if(i<0){tip.style.display="none";return;}
  const o=outL[i].filter(t=>state[t[2]]!==0).sort((a,b)=>b[1]-a[1]),n=inL[i].filter(t=>state[t[2]]!==0).sort((a,b)=>b[1]-a[1]);
- let s="read #"+i;if(o.length)s+="<br>→ read #"+o[0][0]+" ("+o[0][1]+" letters)";if(n.length)s+="<br>← read #"+n[0][0]+" ("+n[0][1]+" letters)";s+="<br>"+(o.length+n.length)+" usable overlaps";
+ let s="read #"+i+" ("+lengths[i]+" nt)";if(o.length)s+="<br>→ read #"+o[0][0]+" ("+o[0][1]+" letters)";if(n.length)s+="<br>← read #"+n[0][0]+" ("+n[0][1]+" letters)";s+="<br>"+(o.length+n.length)+" usable overlaps";if(K>2.2)s+="<br><span style='font-family:monospace'>"+reads[i]+"</span>";
  tip.innerHTML=s;tip.style.display="block";tip.style.left=Math.min(W-170,mx+14)+"px";tip.style.top=Math.min(H-90,my+14)+"px";}
 cv.addEventListener("wheel",e=>{e.preventDefault();const[mx,my]=pt(e),nk=Math.max(0.4,Math.min(60,K*Math.exp(-e.deltaY*0.0015)));TX=mx-(mx-TX)*nk/K;TY=my-(my-TY)*nk/K;K=nk;kick();},{passive:false});
 cv.addEventListener("mousedown",e=>{const[mx,my]=pt(e),i=pick(mx,my);if(i>=0){drag=i;nodes[i].fx=nodes[i].x;nodes[i].fy=nodes[i].y;sim.alphaTarget(0.25);if(sim.alpha()<0.25)sim.alpha(0.25);}else{pan=[mx,my,TX,TY];cv.classList.add("drag");}kick();});
@@ -152,7 +158,7 @@ cv.addEventListener("mouseleave",()=>{if(hover>=0){hover=-1;tip.style.display="n
 let i0=0,timer=null,acc=0;
 function show(k){i0=Math.max(0,Math.min(E,Math.round(k)));goto(i0);
  $(".s-merge").textContent=fmt(i0)+" / "+fmt(E);$(".s-left").textContent=fmt(N-i0);$(".s-long").textContent=fmt(D.maxlen[i0])+" letters";
- cap.textContent=i0?"Merge "+fmt(i0)+": read #"+EV[i0-1][0]+" → read #"+EV[i0-1][1]+", "+EV[i0-1][2]+" letters in common. Edges that can no longer be used disappear.":"Each dot is a read. A line joins two reads whose ends overlap. Greedy takes the longest overlaps first.";
+ cap.textContent=i0?"Merge "+fmt(i0)+": read #"+EV[i0-1][0]+" → read #"+EV[i0-1][1]+", "+EV[i0-1][2]+" letters in common. Edges that can no longer be used disappear.":"Each rectangle is a read. A line joins two reads whose ends overlap. Greedy takes the longest overlaps first.";
  rng.value=i0;cnt.textContent="step "+fmt(i0)+" / "+fmt(E);kick();}
 function stop(){clearInterval(timer);timer=null;playing=false;pp.textContent="▶ Play";}
 function play(){if(i0>=E)show(0);pp.textContent="⏸ Pause";acc=0;playing=true;timer=setInterval(()=>{acc+=spd.value/20;const st=Math.floor(acc);acc-=st;if(i0>=E){stop();return;}show(i0+Math.max(st,0));if(i0>=E)stop();},50);}
@@ -189,7 +195,8 @@ def main():
     cur = max(len(r) for r in reads); maxlen = [cur]
     for e in ev:
         cur = max(cur, e["len"]); maxlen.append(cur)
-    data = {"n": len(reads), "ei": [e[0] for e in edges], "ej": [e[1] for e in edges], "eo": [e[2] for e in edges],
+    data = {"n": len(reads), "reads": reads, "lengths": [len(r) for r in reads],
+            "ei": [e[0] for e in edges], "ej": [e[1] for e in edges], "eo": [e[2] for e in edges],
             "ev": [[e["a"], e["b"], e["ov"], e["len"], e["root"], e["rb"]] for e in ev], "maxlen": maxlen,
             "init": spectral_init(len(reads), edges, a.rows)}
     out = (TEMPLATE.replace("__ID__", "vz" + uuid.uuid4().hex[:8]).replace("__SHOWMIN__", str(a.show_min))
