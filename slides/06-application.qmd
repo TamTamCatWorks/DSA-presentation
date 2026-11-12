@@ -4,6 +4,8 @@
 
 ## Genome Assembly
 
-
-
 ## Assembly of a Virus
+
+```{=html}
+{{< include /assets/06-application/graph.html >}}
+```
