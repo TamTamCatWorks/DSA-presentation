@@ -27,7 +27,7 @@ with `{section}` your desired section
 
 ## View Slides
 
-Open the built `.html` file(s) in the browser and it should display the slides. 
+Open the built `.html` file(s) in the browser and it should display the slides.
 
 ```
 <!-- Linux -->
@@ -35,7 +35,7 @@ xdg-open _site/index.html
 <!-- macOS  -->
 open _site/index.html 
 <!-- Windows -->
-start _site/index.html 
+start _site/index.html
 ```
 
 Or just drag the `.html` into your browser.
@@ -45,12 +45,12 @@ Or just drag the `.html` into your browser.
 Every push to `main` builds and publishes the combined presentation and each
 standalone section with GitHub Actions. The published site is available at:
 
-https://tamtamcatworks.github.io/DSA-presentation/
+[https://tamtamcatworks.github.io/DSA-presentation/]()
 
 The combined presentation is the main page. Standalone sections are published
 under `/sections/`, for example:
 
-https://tamtamcatworks.github.io/DSA-presentation/sections/02-hand-trace/
+[https://tamtamcatworks.github.io/DSA-presentation/sections/02-hand-trace/]()
 
 Each workflow run also provides a downloadable `slides-site` artifact from the
 Actions run summary. Generated files are kept out of the repository.
@@ -64,7 +64,7 @@ Actions run summary. Generated files are kept out of the repository.
 
 - One thing that VSCode can't do is paste images directly into `.qmd` files, so it can be annoying when editing.
 - To fix this you can either:
-    - Enter Visual Editing Mode
-    - Temporarily change the file extension into `.md`
+  - Enter Visual Editing Mode
+  - Temporarily change the file extension into `.md`
 
-Personally I just use RStudio. 
+Personally I just use RStudio.
